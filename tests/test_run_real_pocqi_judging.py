@@ -145,6 +145,35 @@ def test_loader_rejects_incomplete_question_matrix(tmp_path: Path) -> None:
         )
 
 
+def test_loader_selects_repeatable_seeded_question_sample(tmp_path: Path) -> None:
+    path = tmp_path / "generations.jsonl"
+    _write_generations(path, questions=12)
+
+    first = load_latest_question_responses(
+        path,
+        generator_models=("generator-a", "generator-b"),
+        num_questions=5,
+        question_sample_seed=20260824,
+    )
+    repeated = load_latest_question_responses(
+        path,
+        generator_models=("generator-a", "generator-b"),
+        num_questions=5,
+        question_sample_seed=20260824,
+    )
+    different = load_latest_question_responses(
+        path,
+        generator_models=("generator-a", "generator-b"),
+        num_questions=5,
+        question_sample_seed=7,
+    )
+
+    first_ids = [question.question_id for question in first]
+    assert first_ids == [question.question_id for question in repeated]
+    assert first_ids != [question.question_id for question in different]
+    assert first_ids != [f"question-{index}" for index in range(1, 6)]
+
+
 def test_batch_runner_dry_run_and_resume(tmp_path: Path, capsys) -> None:
     generations = tmp_path / "generations.jsonl"
     output_dir = tmp_path / "judgements"
@@ -249,3 +278,100 @@ def test_batch_runner_can_run_only_combined_scoring_and_ranking(
     )
     assert manifest["judging_cases"] == ["rubric_and_model_ranking"]
     assert manifest["logical_judgments"]["total"] == 2
+
+
+def test_identity_revealed_runner_uses_seeded_sample_and_separate_output(
+    tmp_path: Path,
+) -> None:
+    generations = tmp_path / "generations.jsonl"
+    output_dir = tmp_path / "judgements"
+    _write_generations(generations, questions=4)
+    caller = BatchFakeCaller()
+    args = parse_args(
+        [
+            "--input-generations",
+            str(generations),
+            "--output-dir",
+            str(output_dir),
+            "--generator-models",
+            "generator-a",
+            "generator-b",
+            "--judge-models",
+            "gpt-test",
+            "--judging-cases",
+            "rubric_and_model_ranking",
+            "--num-questions",
+            "2",
+            "--question-sample-seed",
+            "42",
+            "--reveal-generator-identities",
+            "--run-id",
+            "revealed-run",
+            "--retry-delay-seconds",
+            "0",
+        ]
+    )
+
+    assert run(args, model_caller=caller) == 0
+    revealed_path = output_dir / "identity_revealed_rubric_and_model_ranking.jsonl"
+    assert revealed_path.exists()
+    assert not (output_dir / "rubric_and_model_ranking.jsonl").exists()
+    records = [json.loads(line) for line in revealed_path.read_text().splitlines()]
+    assert len(records) == 2
+    assert all(record["identity_blinded"] is False for record in records)
+    assert all("generator_model=" in record["user_prompt"] for record in records)
+
+    manifest = json.loads(
+        (output_dir / "revealed-run.manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["question_count"] == 2
+    assert manifest["question_sample_seed"] == 42
+    assert manifest["identity_blinded"] is False
+    assert manifest["experiment_id"] == "real_pocqi_identity_revealed_random200_v1"
+    assert manifest["judgment_output_paths"]["rubric_and_model_ranking"] == str(
+        revealed_path
+    )
+
+
+def test_batch_runner_supports_modal_judge_with_custom_caller(
+    tmp_path: Path,
+) -> None:
+    generations = tmp_path / "generations.jsonl"
+    output_dir = tmp_path / "judgements"
+    _write_generations(generations, questions=1)
+    caller = BatchFakeCaller()
+    args = parse_args(
+        [
+            "--input-generations",
+            str(generations),
+            "--output-dir",
+            str(output_dir),
+            "--generator-models",
+            "generator-a",
+            "generator-b",
+            "--judge-models",
+            "modal/Qwen-test",
+            "--judging-cases",
+            "direct_ranking",
+            "--experiment-id",
+            "modal-direct",
+            "--run-id",
+            "modal-run",
+            "--modal-concurrency",
+            "1",
+            "--retry-delay-seconds",
+            "0",
+        ]
+    )
+
+    assert run(args, model_caller=caller) == 0
+    assert caller.calls == 1
+    record = json.loads(
+        (output_dir / "direct_ranking.jsonl").read_text(encoding="utf-8")
+    )
+    assert record["judge_family"] == "qwen"
+    assert record["judge_model"] == "Qwen-test"
+    manifest = json.loads(
+        (output_dir / "modal-run.manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["provider_concurrency"]["modal"] == 1

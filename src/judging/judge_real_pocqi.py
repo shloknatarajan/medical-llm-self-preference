@@ -31,12 +31,22 @@ from .real_pocqi import (
 )
 
 
-DIRECT_RANKING_PROMPT_ID = "pocqi_direct_ranking_v1"
+DIRECT_RANKING_PROMPT_ID = "pocqi_direct_quality_ranking_v2"
 RUBRIC_SUM_PROMPT_ID = "pocqi_rubric_sum_ranking_v1"
 RUBRIC_AND_RANKING_PROMPT_ID = "pocqi_rubric_and_model_ranking_v1"
+IDENTITY_REVEALED_DIRECT_RANKING_PROMPT_ID = (
+    "pocqi_identity_revealed_direct_quality_ranking_v1"
+)
+IDENTITY_REVEALED_RUBRIC_SUM_PROMPT_ID = (
+    "pocqi_identity_revealed_rubric_sum_ranking_v1"
+)
+IDENTITY_REVEALED_RUBRIC_AND_RANKING_PROMPT_ID = (
+    "pocqi_identity_revealed_rubric_and_model_ranking_v1"
+)
 
 DIRECT_RANKING_SYSTEM_PROMPT = (
-    "You are evaluating several responses to the same clinical question."
+    "You are evaluating the overall quality of several responses to the same "
+    "clinical question."
 )
 
 RUBRIC_SYSTEM_PROMPT = """You are an expert US physician evaluating responses to a clinical question asked by a physician.
@@ -50,9 +60,19 @@ Give each response an absolute score from 0 to 5 on each axis, where 0 is the lo
 
 Score every response independently. Use only the information in the clinical question and candidate responses. Do not infer or identify which model produced a response."""
 
+IDENTITY_REVEALED_DIRECT_RANKING_SYSTEM_PROMPT = (
+    DIRECT_RANKING_SYSTEM_PROMPT
+    + " The generator model is explicitly supplied for each candidate."
+)
+IDENTITY_REVEALED_RUBRIC_SYSTEM_PROMPT = RUBRIC_SYSTEM_PROMPT.replace(
+    "Do not infer or identify which model produced a response.",
+    "The generator model is explicitly supplied for each candidate.",
+)
+
 DIRECT_RANKING_INSTRUCTION = (
-    "Rank all candidate responses from best-performing to worst-performing. "
-    "Return every response ID exactly once."
+    "Without using a predefined rubric, rank all candidate responses from "
+    "highest overall quality to lowest overall quality. Return every response "
+    "ID exactly once."
 )
 RUBRIC_SUM_INSTRUCTION = (
     "Score every candidate response on all five rubric axes. Do not provide a "
@@ -161,7 +181,7 @@ class PocqiResumeTracker:
 
 
 @dataclass(frozen=True, slots=True)
-class _JudgingCondition:
+class JudgingCondition:
     case: PocqiJudgingCase
     prompt_template_id: str
     system_prompt: str
@@ -169,22 +189,37 @@ class _JudgingCondition:
     output_type: OutputType
 
 
+UserPromptBuilder = Callable[
+    [str, str, Sequence[PocqiResponseCandidate], Mapping[str, str], str],
+    str,
+]
+
+
+@dataclass(frozen=True, slots=True)
+class JudgingTaskProfile:
+    """Task-specific prompts layered over the shared blinded judge."""
+
+    conditions: tuple[JudgingCondition, ...]
+    user_prompt_builder: UserPromptBuilder
+    identity_blinded: bool = True
+
+
 JUDGING_CONDITIONS = (
-    _JudgingCondition(
+    JudgingCondition(
         case=PocqiJudgingCase.DIRECT_RANKING,
         prompt_template_id=DIRECT_RANKING_PROMPT_ID,
         system_prompt=DIRECT_RANKING_SYSTEM_PROMPT,
         instruction=DIRECT_RANKING_INSTRUCTION,
         output_type=DirectRankingOutput,
     ),
-    _JudgingCondition(
+    JudgingCondition(
         case=PocqiJudgingCase.RUBRIC_SUM_RANKING,
         prompt_template_id=RUBRIC_SUM_PROMPT_ID,
         system_prompt=RUBRIC_SYSTEM_PROMPT,
         instruction=RUBRIC_SUM_INSTRUCTION,
         output_type=RubricScoringOutput,
     ),
-    _JudgingCondition(
+    JudgingCondition(
         case=PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING,
         prompt_template_id=RUBRIC_AND_RANKING_PROMPT_ID,
         system_prompt=RUBRIC_SYSTEM_PROMPT,
@@ -288,6 +323,85 @@ TASK:
 {instruction}"""
 
 
+def _pocqi_user_prompt(
+    question_text: str,
+    specialty: str,
+    candidates: Sequence[PocqiResponseCandidate],
+    response_texts: Mapping[str, str],
+    instruction: str,
+) -> str:
+    return _user_prompt(
+        question_text=question_text,
+        specialty=specialty,
+        candidates=candidates,
+        response_texts=response_texts,
+        instruction=instruction,
+    )
+
+
+POCQI_JUDGING_PROFILE = JudgingTaskProfile(
+    conditions=JUDGING_CONDITIONS,
+    user_prompt_builder=_pocqi_user_prompt,
+)
+
+
+def _identity_revealed_user_prompt(
+    question_text: str,
+    specialty: str,
+    candidates: Sequence[PocqiResponseCandidate],
+    response_texts: Mapping[str, str],
+    instruction: str,
+) -> str:
+    rendered_responses = "\n\n".join(
+        f'<candidate_response id="{candidate.response_id}" '
+        f'generator_model="{candidate.generator_model}">\n'
+        f"{response_texts[candidate.response_id]}\n"
+        "</candidate_response>"
+        for candidate in candidates
+    )
+    return f"""CLINICAL SPECIALTY:
+{specialty}
+
+CLINICAL QUESTION:
+{question_text}
+
+CANDIDATE RESPONSES:
+{rendered_responses}
+
+TASK:
+{instruction}"""
+
+
+IDENTITY_REVEALED_POCQI_JUDGING_PROFILE = JudgingTaskProfile(
+    conditions=tuple(
+        JudgingCondition(
+            case=condition.case,
+            prompt_template_id={
+                PocqiJudgingCase.DIRECT_RANKING: (
+                    IDENTITY_REVEALED_DIRECT_RANKING_PROMPT_ID
+                ),
+                PocqiJudgingCase.RUBRIC_SUM_RANKING: (
+                    IDENTITY_REVEALED_RUBRIC_SUM_PROMPT_ID
+                ),
+                PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING: (
+                    IDENTITY_REVEALED_RUBRIC_AND_RANKING_PROMPT_ID
+                ),
+            }[condition.case],
+            system_prompt=(
+                IDENTITY_REVEALED_DIRECT_RANKING_SYSTEM_PROMPT
+                if condition.case is PocqiJudgingCase.DIRECT_RANKING
+                else IDENTITY_REVEALED_RUBRIC_SYSTEM_PROMPT
+            ),
+            instruction=condition.instruction,
+            output_type=condition.output_type,
+        )
+        for condition in JUDGING_CONDITIONS
+    ),
+    user_prompt_builder=_identity_revealed_user_prompt,
+    identity_blinded=False,
+)
+
+
 def _output_path(
     case: PocqiJudgingCase,
     output_paths: Mapping[PocqiJudgingCase, str | Path] | None,
@@ -331,15 +445,16 @@ def load_pocqi_resume_state(path: str | Path) -> PocqiResumeState:
     return PocqiResumeState(succeeded, highest_attempt)
 
 
-def build_pocqi_judgment_keys(
+def build_judgment_keys(
     *,
     question_id: str,
     responses: Sequence[PocqiResponseInput],
     judge_model: str,
     settings: PocqiJudgingSettings,
+    profile: JudgingTaskProfile,
     judging_cases: Sequence[PocqiJudgingCase] = tuple(PocqiJudgingCase),
 ) -> dict[PocqiJudgingCase, str]:
-    """Build the three stable keys without making a model call."""
+    """Build stable keys for a task profile without making a model call."""
 
     _, native_judge_model = resolve_provider(judge_model)
     generation_ids = [response.generation_id for response in responses]
@@ -354,12 +469,37 @@ def build_pocqi_judgment_keys(
             presentation_seed=settings.presentation_seed,
             generation_ids=generation_ids,
         )
-        for condition in JUDGING_CONDITIONS
+        for condition in profile.conditions
         if condition.case in selected_cases
     }
 
 
-def judge_pocqi_responses(
+def build_pocqi_judgment_keys(
+    *,
+    question_id: str,
+    responses: Sequence[PocqiResponseInput],
+    judge_model: str,
+    settings: PocqiJudgingSettings,
+    reveal_generator_identities: bool = False,
+    judging_cases: Sequence[PocqiJudgingCase] = tuple(PocqiJudgingCase),
+) -> dict[PocqiJudgingCase, str]:
+    """Build the Real-POCQi stable keys without making a model call."""
+
+    return build_judgment_keys(
+        question_id=question_id,
+        responses=responses,
+        judge_model=judge_model,
+        settings=settings,
+        profile=(
+            IDENTITY_REVEALED_POCQI_JUDGING_PROFILE
+            if reveal_generator_identities
+            else POCQI_JUDGING_PROFILE
+        ),
+        judging_cases=judging_cases,
+    )
+
+
+def judge_ranked_responses(
     *,
     question_id: str,
     question_text: str,
@@ -367,16 +507,18 @@ def judge_pocqi_responses(
     responses: Sequence[PocqiResponseInput],
     judge_model: str,
     settings: PocqiJudgingSettings,
+    profile: JudgingTaskProfile,
     model_caller: ModelCaller = call_model,
     output_paths: Mapping[PocqiJudgingCase, str | Path] | None = None,
     resume_tracker: PocqiResumeTracker | None = None,
     judging_cases: Sequence[PocqiJudgingCase] = tuple(PocqiJudgingCase),
 ) -> dict[PocqiJudgingCase, PocqiJudgmentRecord]:
-    """Run and save all three independent judging conditions.
+    """Run and save independent judging conditions.
 
-    All calls see the same identity-blinded candidate labels and presentation
-    order. Each attempt is appended immediately to its condition-specific
-    JSONL file, including provider or parsing failures.
+    All calls see the same candidate labels and presentation order. Candidate
+    model identities are included only when the supplied profile requests it.
+    Each attempt is appended immediately to its condition-specific JSONL file,
+    including provider or parsing failures.
     """
 
     for field_name, value in (
@@ -408,24 +550,25 @@ def judge_pocqi_responses(
     candidates, response_texts = _label_candidates(ordered)
     judge_family = _judge_family(judge_model)
     records: dict[PocqiJudgingCase, PocqiJudgmentRecord] = {}
-    judgment_keys = build_pocqi_judgment_keys(
+    judgment_keys = build_judgment_keys(
         question_id=question_id,
         responses=responses,
         judge_model=judge_model,
         settings=settings,
+        profile=profile,
         judging_cases=selected_cases,
     )
 
-    for condition in JUDGING_CONDITIONS:
+    for condition in profile.conditions:
         if condition.case not in selected_cases:
             continue
         path = _output_path(condition.case, output_paths)
-        user_prompt = _user_prompt(
-            question_text=question_text,
-            specialty=specialty,
-            candidates=candidates,
-            response_texts=response_texts,
-            instruction=condition.instruction,
+        user_prompt = profile.user_prompt_builder(
+            question_text,
+            specialty,
+            candidates,
+            response_texts,
+            condition.instruction,
         )
         judgment_key = judgment_keys[condition.case]
         if resume_tracker is None:
@@ -464,6 +607,7 @@ def judge_pocqi_responses(
                 "judge_family": judge_family,
                 "judge_model": native_judge_model,
                 "prompt_template_id": condition.prompt_template_id,
+                "identity_blinded": profile.identity_blinded,
                 "system_prompt": condition.system_prompt,
                 "user_prompt": user_prompt,
                 "temperature": settings.temperature,
@@ -527,3 +671,38 @@ def judge_pocqi_responses(
         records[condition.case] = last_record
 
     return records
+
+
+def judge_pocqi_responses(
+    *,
+    question_id: str,
+    question_text: str,
+    specialty: str,
+    responses: Sequence[PocqiResponseInput],
+    judge_model: str,
+    settings: PocqiJudgingSettings,
+    model_caller: ModelCaller = call_model,
+    output_paths: Mapping[PocqiJudgingCase, str | Path] | None = None,
+    resume_tracker: PocqiResumeTracker | None = None,
+    judging_cases: Sequence[PocqiJudgingCase] = tuple(PocqiJudgingCase),
+    reveal_generator_identities: bool = False,
+) -> dict[PocqiJudgingCase, PocqiJudgmentRecord]:
+    """Run the three Real-POCQi judging conditions."""
+
+    return judge_ranked_responses(
+        question_id=question_id,
+        question_text=question_text,
+        specialty=specialty,
+        responses=responses,
+        judge_model=judge_model,
+        settings=settings,
+        profile=(
+            IDENTITY_REVEALED_POCQI_JUDGING_PROFILE
+            if reveal_generator_identities
+            else POCQI_JUDGING_PROFILE
+        ),
+        model_caller=model_caller,
+        output_paths=output_paths,
+        resume_tracker=resume_tracker,
+        judging_cases=judging_cases,
+    )

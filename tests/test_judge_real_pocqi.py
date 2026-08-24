@@ -117,6 +117,7 @@ def test_three_case_judging_smoke(tmp_path: Path) -> None:
     assert caller.calls[1]["response_format"] is RubricScoringOutput
     assert caller.calls[2]["response_format"] is RubricAndModelRankingOutput
     assert "accuracy" not in caller.calls[0]["system"]
+    assert "Without using a predefined rubric" in caller.calls[0]["input"]
     assert "accuracy" in caller.calls[1]["system"]
     assert "Do not provide a ranking" in caller.calls[1]["input"]
     for call in caller.calls:
@@ -213,6 +214,48 @@ def test_three_case_judging_smoke(tmp_path: Path) -> None:
         key = records[case].resolved_judgment_key()
         assert state.succeeded_by_key[key] == records[case]
         assert state.highest_attempt_by_key[key] == 1
+
+
+def test_identity_revealed_judging_shows_models_and_records_condition(
+    tmp_path: Path,
+) -> None:
+    caller = FakeJudgeCaller()
+    output_path = tmp_path / "identity_revealed_rubric_and_model_ranking.jsonl"
+
+    records = judge_pocqi_responses(
+        question_id="question-1",
+        question_text="What is the recommended treatment?",
+        specialty="Cardiology",
+        responses=_responses(),
+        judge_model="openai/gpt-test",
+        settings=PocqiJudgingSettings(
+            experiment_id="identity-revealed-test",
+            run_id="run-1",
+        ),
+        model_caller=caller,
+        output_paths={
+            PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING: output_path,
+        },
+        judging_cases=(PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING,),
+        reveal_generator_identities=True,
+    )
+
+    assert len(caller.calls) == 1
+    visible = caller.calls[0]["system"] + "\n" + caller.calls[0]["input"]
+    for model in ("gpt-test", "claude-test", "gemini-test"):
+        assert f'generator_model="{model}"' in visible
+    assert "explicitly supplied for each candidate" in caller.calls[0]["system"]
+    assert "Do not infer or identify" not in caller.calls[0]["system"]
+    for hidden in ("generation-1", "generation-2", "generation-3"):
+        assert hidden not in visible
+
+    record = records[PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING]
+    assert record.identity_blinded is False
+    assert "identity_revealed" in record.prompt_template_id
+    restored = PocqiJudgmentRecord.model_validate_json(
+        output_path.read_text(encoding="utf-8")
+    )
+    assert restored.identity_blinded is False
 
 
 def test_force_appends_a_new_attempt_for_every_case(tmp_path: Path) -> None:

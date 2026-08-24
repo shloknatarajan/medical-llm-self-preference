@@ -1,4 +1,4 @@
-"""Run all three Real-POCQi judging styles across questions and API judges.
+"""Run Real-POCQi judging styles across questions and judge models.
 
 The runner consumes the latest successful generation for every requested
 question/model cell, validates complete candidate coverage, and schedules one
@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -38,6 +39,10 @@ DEFAULT_GENERATIONS_PATH = Path(
 )
 DEFAULT_OUTPUT_DIR = Path("data/real_pcoqi/judgements")
 DEFAULT_EXPERIMENT_ID = "real_pocqi_all_judges_v1"
+DEFAULT_IDENTITY_REVEALED_EXPERIMENT_ID = (
+    "real_pocqi_identity_revealed_random200_v1"
+)
+DEFAULT_QUESTION_SAMPLE_SEED = 42
 
 DEFAULT_GENERATOR_MODELS = (
     "gpt-5.6-sol",
@@ -109,14 +114,21 @@ def default_run_id() -> str:
     return f"real-pocqi-judging-{timestamp}-{uuid.uuid4().hex[:8]}"
 
 
-def output_paths(output_dir: Path) -> dict[PocqiJudgingCase, Path]:
+def output_paths(
+    output_dir: Path,
+    *,
+    reveal_generator_identities: bool = False,
+) -> dict[PocqiJudgingCase, Path]:
+    prefix = "identity_revealed_" if reveal_generator_identities else ""
     return {
-        PocqiJudgingCase.DIRECT_RANKING: output_dir / "direct_ranking.jsonl",
+        PocqiJudgingCase.DIRECT_RANKING: (
+            output_dir / f"{prefix}direct_ranking.jsonl"
+        ),
         PocqiJudgingCase.RUBRIC_SUM_RANKING: (
-            output_dir / "rubric_sum_ranking.jsonl"
+            output_dir / f"{prefix}rubric_sum_ranking.jsonl"
         ),
         PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING: (
-            output_dir / "rubric_and_model_ranking.jsonl"
+            output_dir / f"{prefix}rubric_and_model_ranking.jsonl"
         ),
     }
 
@@ -126,6 +138,7 @@ def load_latest_question_responses(
     *,
     generator_models: Sequence[str],
     num_questions: int | None = None,
+    question_sample_seed: int | None = None,
 ) -> list[PocqiQuestionResponses]:
     """Load latest successful generations and require a complete model matrix."""
 
@@ -162,6 +175,8 @@ def load_latest_question_responses(
 
     if not latest:
         raise ValueError(f"no requested successful generations found in {path}")
+    if question_sample_seed is not None:
+        random.Random(question_sample_seed).shuffle(question_order)
     if num_questions is not None:
         if num_questions <= 0:
             raise ValueError("num_questions must be positive")
@@ -218,10 +233,15 @@ def validate_judge_models(judge_models: Sequence[str]) -> tuple[str, ...]:
         raise ValueError("judge models must be unique")
     for model in models:
         provider, _ = resolve_provider(model)
-        if provider not in (Provider.OPENAI, Provider.ANTHROPIC, Provider.GEMINI):
+        if provider not in (
+            Provider.OPENAI,
+            Provider.ANTHROPIC,
+            Provider.GEMINI,
+            Provider.MODAL,
+        ):
             raise ValueError(
                 f"judge {model!r} uses {provider.value}; this runner currently "
-                "supports only OpenAI, Anthropic, and Gemini"
+                "supports OpenAI, Anthropic, Gemini, and Modal"
             )
     return models
 
@@ -234,6 +254,7 @@ def plan_jobs(
     paths: dict[PocqiJudgingCase, Path],
     tracker: PocqiResumeTracker,
     judging_cases: Sequence[PocqiJudgingCase],
+    reveal_generator_identities: bool = False,
 ) -> list[PlannedJob]:
     jobs: list[PlannedJob] = []
     for question in questions:
@@ -243,6 +264,7 @@ def plan_jobs(
                 responses=question.responses,
                 judge_model=judge_model,
                 settings=settings,
+                reveal_generator_identities=reveal_generator_identities,
                 judging_cases=judging_cases,
             )
             pending: list[PocqiJudgingCase] = []
@@ -275,12 +297,23 @@ def write_manifest(
         "run_id": run_id,
         "created_at": utc_now(),
         "input_generations": str(args.input_generations),
+        "env_file": str(args.env_file),
         "output_dir": str(args.output_dir),
         "question_count": len(questions),
         "question_ids": [question.question_id for question in questions],
         "generator_models": list(args.generator_models),
         "judge_models": list(judge_models),
         "judging_cases": list(args.judging_cases),
+        "identity_blinded": not args.reveal_generator_identities,
+        "judgment_output_paths": {
+            case.value: str(path)
+            for case, path in output_paths(
+                args.output_dir,
+                reveal_generator_identities=args.reveal_generator_identities,
+            ).items()
+            if case.value in args.judging_cases
+        },
+        "question_sample_seed": args.question_sample_seed,
         "presentation_seed": args.presentation_seed,
         "temperature": args.temperature,
         "max_output_tokens": args.max_output_tokens,
@@ -291,6 +324,7 @@ def write_manifest(
             "openai": args.openai_concurrency,
             "anthropic": args.anthropic_concurrency,
             "gemini": args.gemini_concurrency,
+            "modal": args.modal_concurrency,
         },
         "logical_judgments": counts,
     }
@@ -308,6 +342,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=DEFAULT_GENERATIONS_PATH,
     )
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        default=Path(".env"),
+        help="dotenv credential file (values are never written to outputs)",
+    )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--generator-models", nargs="+", default=DEFAULT_GENERATOR_MODELS)
     parser.add_argument("--judge-models", nargs="+", default=DEFAULT_JUDGE_MODELS)
@@ -318,7 +358,24 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=[case.value for case in PocqiJudgingCase],
     )
     parser.add_argument("--num-questions", type=int, default=None)
+    parser.add_argument(
+        "--question-sample-seed",
+        type=int,
+        default=None,
+        help=(
+            "shuffle the complete question cohort deterministically before "
+            "applying --num-questions"
+        ),
+    )
     parser.add_argument("--experiment-id", default=DEFAULT_EXPERIMENT_ID)
+    parser.add_argument(
+        "--reveal-generator-identities",
+        action="store_true",
+        help=(
+            "show each candidate's generator model to the judge and write to "
+            "identity_revealed_*.jsonl files"
+        ),
+    )
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--presentation-seed", type=int, default=42)
     parser.add_argument("--temperature", type=float, default=None)
@@ -327,6 +384,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--openai-concurrency", type=int, default=2)
     parser.add_argument("--anthropic-concurrency", type=int, default=2)
     parser.add_argument("--gemini-concurrency", type=int, default=2)
+    parser.add_argument("--modal-concurrency", type=int, default=2)
     parser.add_argument("--retries", type=int, default=2)
     parser.add_argument("--retry-delay-seconds", type=float, default=2.0)
     parser.add_argument("--force", action="store_true")
@@ -346,6 +404,7 @@ def run(
         "openai_concurrency",
         "anthropic_concurrency",
         "gemini_concurrency",
+        "modal_concurrency",
     ):
         if getattr(args, name) <= 0:
             raise ValueError(f"--{name.replace('_', '-')} must be positive")
@@ -354,12 +413,21 @@ def run(
     if args.retry_delay_seconds < 0:
         raise ValueError("--retry-delay-seconds cannot be negative")
 
+    if args.reveal_generator_identities:
+        if args.num_questions is None:
+            args.num_questions = 200
+        if args.question_sample_seed is None:
+            args.question_sample_seed = DEFAULT_QUESTION_SAMPLE_SEED
+        if args.experiment_id == DEFAULT_EXPERIMENT_ID:
+            args.experiment_id = DEFAULT_IDENTITY_REVEALED_EXPERIMENT_ID
+
     judge_models = validate_judge_models(args.judge_models)
     judging_cases = tuple(PocqiJudgingCase(value) for value in args.judging_cases)
     questions = load_latest_question_responses(
         args.input_generations,
         generator_models=args.generator_models,
         num_questions=args.num_questions,
+        question_sample_seed=args.question_sample_seed,
     )
     run_id = args.run_id or default_run_id()
     settings = PocqiJudgingSettings(
@@ -372,7 +440,10 @@ def run(
         retry_delay_seconds=args.retry_delay_seconds,
         force=args.force,
     )
-    paths = output_paths(args.output_dir)
+    paths = output_paths(
+        args.output_dir,
+        reveal_generator_identities=args.reveal_generator_identities,
+    )
     tracker = PocqiResumeTracker(list(paths.values()))
     jobs = plan_jobs(
         questions=questions,
@@ -381,6 +452,7 @@ def run(
         paths=paths,
         tracker=tracker,
         judging_cases=judging_cases,
+        reveal_generator_identities=args.reveal_generator_identities,
     )
     total_logical = len(jobs) * len(judging_cases)
     pending_logical = sum(len(job.pending_cases) for job in jobs)
@@ -400,6 +472,7 @@ def run(
             Provider.OPENAI: args.openai_concurrency,
             Provider.ANTHROPIC: args.anthropic_concurrency,
             Provider.GEMINI: args.gemini_concurrency,
+            Provider.MODAL: args.modal_concurrency,
         },
     )
 
@@ -418,6 +491,7 @@ def run(
             output_paths=paths,
             resume_tracker=tracker,
             judging_cases=job.pending_cases,
+            reveal_generator_identities=args.reveal_generator_identities,
         )
 
     with ThreadPoolExecutor(max_workers=args.max_concurrency) as executor:
@@ -465,8 +539,9 @@ def run(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    load_dotenv()
-    return run(parse_args(argv))
+    args = parse_args(argv)
+    load_dotenv(args.env_file)
+    return run(args)
 
 
 if __name__ == "__main__":

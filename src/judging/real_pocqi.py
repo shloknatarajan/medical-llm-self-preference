@@ -245,13 +245,13 @@ PocqiJudgmentResult = Annotated[
 class PocqiJudgmentRecord(BaseModel):
     """Append-only saved record for one Real-POCQi judging attempt.
 
-    Candidate provenance is retained here for analysis, but it is not part of
-    the identity-blinded prompt sent to the judge.
+    Candidate provenance is retained for analysis. ``identity_blinded`` says
+    whether generator names were omitted from the prompt sent to the judge.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0", "1.1"] = "1.1"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     experiment_id: str = Field(min_length=1)
     run_id: str = Field(min_length=1)
     judgment_key: str | None = None
@@ -269,6 +269,7 @@ class PocqiJudgmentRecord(BaseModel):
     judge_family: str = Field(min_length=1)
     judge_model: str = Field(min_length=1)
     prompt_template_id: str = Field(min_length=1)
+    identity_blinded: bool = True
     system_prompt: str
     user_prompt: str = Field(min_length=1)
 
