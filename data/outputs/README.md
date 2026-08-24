@@ -11,6 +11,10 @@ experiments:
 - generation parameters, token usage, latency, and finish state; and
 - nullable error fields.
 
+This directory contains active experiment outputs. Standalone pilot runs that
+were not folded into a complete experiment are retained under
+`data/deprecated/pilots/`.
+
 ## MedSP1000 multi-turn responses
 
 MedSP1000 uses

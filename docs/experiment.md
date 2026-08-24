@@ -813,7 +813,7 @@ and use a hierarchical rank model.
 | Complete 4-turn judgments | `data/outputs/medsp1000/judgements/rubric_and_model_ranking_4_turns.jsonl` |
 | Complete 6-turn judgments | `data/outputs/medsp1000/judgements/rubric_and_model_ranking_6_turns.jsonl` |
 | Complete 8-turn judgments | `data/outputs/medsp1000/judgements/rubric_and_model_ranking.jsonl` |
-| Patient-simulator pilot summaries | `data/outputs/pilots/*/summary.json` |
+| Historical pilot outputs | `data/deprecated/pilots/` |
 
 All production JSONL files are append-only and retain failures, retries, smoke
 records, and superseded successful attempts. Analyses must filter by

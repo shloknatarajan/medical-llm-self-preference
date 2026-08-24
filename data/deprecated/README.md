@@ -14,6 +14,26 @@ but they are not active experiment question sets:
   contained unsupported details and its clinician departed from the assigned
   task.
 
-Each JSONL artifact remains paired with its original manifest. New experiment
-runs should use `data/question_sets/medsp1000_generation_cases.jsonl` or another
-explicitly active question set instead.
+The `pilots/` tree contains outputs that were not expanded into a production
+condition:
+
+- `pilots/generation/`: standalone patient-simulator comparisons and
+  one-scenario generation-only trials;
+- `pilots/judging/medsp1000/`: the incomplete direct-ranking and
+  rubric-sum-ranking judging trials;
+- `pilots/judging/real_pocqi/`: the standalone Real-POCQi rubric-sum smoke
+  output; and
+- `pilots/manifests/real_pocqi/`: manifests for distinct smoke experiment IDs
+  that were not resumed as production experiment cells.
+
+Some active append-only output files still contain smoke attempts alongside
+production attempts. Those records remain in place so the files retain their
+complete audit history; analysis selects the production experiment ID and the
+last successful attempt for each cell. Likewise, pilot- or retry-named
+manifests remain beside active outputs when their successful records were
+subsequently folded into the complete 620-question or 200-scenario cohort.
+
+Each deprecated question-set JSONL remains paired with its original manifest.
+New experiment runs should use
+`data/question_sets/medsp1000_generation_cases.jsonl` or another explicitly
+active question set instead.
