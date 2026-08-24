@@ -522,8 +522,10 @@ def run(args: argparse.Namespace, *, model_caller: ModelCaller = call_model) -> 
 
     jobs: list[tuple[RealPocqiQuestion, str, str, int]] = []
     skipped = 0
-    for model in args.models:
-        for question in questions:
+    # Round-robin models within each question so mixed-provider runs share the
+    # worker pool instead of exhausting one provider's entire queue first.
+    for question in questions:
+        for model in args.models:
             generation_key = RealPocqiOutput.build_generation_key(
                 args.experiment_id,
                 question.question_id,

@@ -18,6 +18,9 @@ do not accept it. Use `--temperature` only with a compatible model. The default
 output cap is 4,096 tokens; responses that still hit the cap are recorded as
 failures instead of being mistaken for complete answers.
 
+Mixed-model runs queue models round-robin for each question, allowing providers
+to generate concurrently within the configured worker limit.
+
 Qwen and other Modal-hosted models also require their deployed app:
 
 ```bash

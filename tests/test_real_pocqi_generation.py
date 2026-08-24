@@ -205,6 +205,63 @@ def test_pipeline_rejects_truncated_response_without_retrying(tmp_path: Path) ->
     assert record.output_tokens == 4096
 
 
+def test_pipeline_queues_models_round_robin_by_question(tmp_path: Path) -> None:
+    input_path = tmp_path / "questions.jsonl"
+    output_path = tmp_path / "generations.jsonl"
+    input_path.write_text(
+        "\n".join(
+            json.dumps(
+                {
+                    "question_id": f"question-{index}",
+                    "question_text": f"Question {index}?",
+                    "specialty": "Cardiology",
+                }
+            )
+            for index in (1, 2)
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    call_order: list[tuple[str, str]] = []
+
+    def fake_model_caller(
+        model: str, user_prompt: str, **kwargs: object
+    ) -> ModelResponse[object]:
+        question_id = "question-1" if "Question 1?" in user_prompt else "question-2"
+        call_order.append((question_id, model))
+        return ModelResponse(
+            text="Complete answer",
+            provider=Provider.OPENAI,
+            model=model,
+        )
+
+    args = parse_args(
+        [
+            "--models",
+            "gpt-5.6-sol",
+            "claude-opus-5",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--run-id",
+            "round-robin-run",
+            "--num-questions",
+            "2",
+            "--no-shuffle",
+            "--max-concurrency",
+            "1",
+        ]
+    )
+    assert run(args, model_caller=fake_model_caller) == 0
+    assert call_order == [
+        ("question-1", "gpt-5.6-sol"),
+        ("question-1", "claude-opus-5"),
+        ("question-2", "gpt-5.6-sol"),
+        ("question-2", "claude-opus-5"),
+    ]
+
+
 def test_load_dotenv_preserves_exported_values(tmp_path: Path, monkeypatch) -> None:
     dotenv_path = tmp_path / ".env"
     dotenv_path.write_text(
