@@ -21,6 +21,7 @@ from generation.medsp1000 import (
     DEFAULT_EXCHANGES,
     DEFAULT_INPUT,
     DEFAULT_OUTPUT,
+    DEFAULT_PATIENT_MAX_TOKENS,
     EXPERIMENT_ID,
     MedSPQuestion,
     OUTPUT_SCHEMA_VERSION,
@@ -624,10 +625,11 @@ def main(
     exchanges: int = DEFAULT_EXCHANGES,
     num_questions: int = 200,
     smoke_test: bool = False,
-    patient_max_tokens: int = 160,
+    patient_max_tokens: int = DEFAULT_PATIENT_MAX_TOKENS,
     clinician_max_tokens: int = DEFAULT_CLINICIAN_MAX_TOKENS,
     checkpoint_batch_size: int = 8,
     clinician_model: str = DEFAULT_CLINICIAN_MODEL,
+    question_ids: str = "",
     run_id: str = "",
     force: bool = False,
 ) -> None:
@@ -642,12 +644,23 @@ def main(
     clinician_temperature = 0.2 if clinician_provider is Provider.MODAL else None
     clinician_reasoning = _clinician_reasoning(clinician_model)
     questions = load_questions(Path(input_path))
-    if smoke_test:
-        num_questions = 1
-    if not 1 <= num_questions <= len(questions):
-        raise ValueError(
-            f"num_questions must be between 1 and {len(questions)}"
-        )
+    requested_ids = {value.strip() for value in question_ids.split(",") if value.strip()}
+    if requested_ids:
+        available_ids = {question.question_id for question in questions}
+        missing_ids = sorted(requested_ids - available_ids)
+        if missing_ids:
+            raise ValueError(f"unknown question_ids: {', '.join(missing_ids)}")
+        selected_questions = [
+            question for question in questions if question.question_id in requested_ids
+        ]
+    else:
+        if smoke_test:
+            num_questions = 1
+        if not 1 <= num_questions <= len(questions):
+            raise ValueError(
+                f"num_questions must be between 1 and {len(questions)}"
+            )
+        selected_questions = questions[:num_questions]
     source = Path(input_path)
     destination = Path(output_path)
     resume = load_resume_state(destination)
@@ -665,14 +678,14 @@ def main(
             clinician_reasoning_effort=clinician_reasoning["effort"],
             seed=SEED,
         )
-        for question in questions[:num_questions]
+        for question in selected_questions
     }
     pending = [
         question
-        for question in questions[:num_questions]
+        for question in selected_questions
         if force or generation_keys[question.question_id] not in resume.succeeded_keys
     ]
-    skipped = num_questions - len(pending)
+    skipped = len(selected_questions) - len(pending)
     if not pending:
         print("All selected MedSP1000 questions are already complete")
         return
@@ -690,7 +703,7 @@ def main(
     patient = PatientMistralSmall31()
     manifest_path = destination.parent / f"{active_run_id}.manifest.json"
     selected_question_ids = [
-        question.question_id for question in questions[:num_questions]
+        question.question_id for question in selected_questions
     ]
     manifest_created_at = utc_now()
     succeeded = 0

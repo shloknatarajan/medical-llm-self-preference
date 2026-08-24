@@ -135,6 +135,7 @@ def test_only_current_clinician_turn_contains_turn_control() -> None:
 def test_generation_key_changes_with_prompt_or_run_configuration() -> None:
     default_key = build_generation_key("question-1")
     assert PROMPT_VERSION in default_key
+    assert "patient-max-320" in default_key
     assert default_key != build_generation_key("question-1", exchanges=5)
     assert default_key != build_generation_key("question-1", seed=7)
     assert default_key != build_generation_key(

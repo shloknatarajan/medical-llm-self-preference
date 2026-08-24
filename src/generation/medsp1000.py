@@ -37,6 +37,7 @@ OUTPUT_SCHEMA = PROJECT_ROOT / (
 PATIENT_MODEL = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
 DEFAULT_CLINICIAN_MODEL = "Qwen/Qwen3.5-122B-A10B-FP8"
 DEFAULT_EXCHANGES = 4
+DEFAULT_PATIENT_MAX_TOKENS = 320
 DEFAULT_CLINICIAN_MAX_TOKENS = 4096
 EXPERIMENT_ID = "medsp1000-multiturn-generation-v1"
 PROMPT_VERSION = "medsp1000-multiturn-v2"
@@ -217,7 +218,7 @@ def build_generation_key(
     question_text_sha256: str = "",
     private_patient_context_sha256: str = "",
     exchanges: int = DEFAULT_EXCHANGES,
-    patient_max_tokens: int = 160,
+    patient_max_tokens: int = DEFAULT_PATIENT_MAX_TOKENS,
     clinician_max_tokens: int = DEFAULT_CLINICIAN_MAX_TOKENS,
     clinician_temperature: float | None = 0.2,
     clinician_reasoning_mode: str = "disabled",
