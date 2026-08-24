@@ -16,6 +16,14 @@
   - Chose 125 scenarios per setting based on a power analysis targeting 90% power at a two-sided significance level of 0.05.
   - The power analysis estimated that approximately 119 paired observations were needed to detect a score-level effect of d = 0.30 and approximately 114 observations were needed to detect a 65% own-pick rate against a 50% null rate.
 
+- **Seeds and reproducibility**
+  - The paper states that A/B order was randomized with a fixed seed but does not report the seed value or list the 125 selected Real-POCQi question IDs.
+  - The adjacent `zara-med-self-preference-update` implementation specifies seed 42 for the Real-POCQi sample: it shuffles the 620-question Hugging Face dataset with `ds.shuffle(seed=42)` and takes the first 125 questions.
+  - Reproducing the exact subset also requires the same dataset revision and compatible Hugging Face `datasets` shuffle behavior. The workflow writes the selected rows to `questions.json`, but no generated question manifest is committed in the adjacent repository.
+  - Pairwise A/B placement also uses seed 42. Placement is a deterministic function of the seed and question/scenario ID, `random.Random(f"{seed}:{scenario_id}")`, so both judges see the same A/B ordering for a given case even when evaluation is parallelized.
+  - Bootstrap confidence intervals use 10,000 resamples with seed 42 by default.
+  - No provider-side seed is specified for LLM answer generation. The production Real-POCQi generator omits temperature because the primary OpenAI and Anthropic endpoints do not accept it; regenerating answers is still not guaranteed to produce identical text even when the question subset is held fixed.
+
 - **Single-turn experiment**
   - Prompted each model to answer every Real-POCQi question as a specialist in the question's associated medical specialty.
   - Generated one response per model for each of the 125 questions, producing 500 responses in total.

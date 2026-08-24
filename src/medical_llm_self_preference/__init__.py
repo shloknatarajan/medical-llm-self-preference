@@ -6,7 +6,7 @@ from .real_pocqi_judgment import (
     PairwisePreference,
     RealPocqiJudgment,
 )
-from .real_pocqi_output import GenerationStatus, RealPocqiOutput
+from generation.real_pocqi import GenerationStatus, RealPocqiOutput
 
 __all__ = [
     "ClinicalScores",

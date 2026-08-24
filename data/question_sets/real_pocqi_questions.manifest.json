@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "artifact": "real_pocqi_questions.jsonl",
+  "record_count": 620,
+  "source_dataset": "jjfenglab/Real-POCQi",
+  "source_revision": "9002e1ddff506d354f1b7becc1213b96299d07f6",
+  "source_file": "questions.parquet",
+  "source_file_sha256": "1af9b254151ac659286ab609e7c7b7f6bb8f830fa82eecb5b9eddb3a2322b9b3",
+  "record_schema": {
+    "schema_version": "string",
+    "source_dataset": "string",
+    "source_revision": "string",
+    "source_file": "string",
+    "source_row_index": "integer",
+    "question_id": "string (UUID)",
+    "question_text": "string",
+    "specialty": "string"
+  }
+}
