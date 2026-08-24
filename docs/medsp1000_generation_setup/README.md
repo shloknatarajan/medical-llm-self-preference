@@ -274,9 +274,11 @@ provider-returned model version are retained in every response.
 Conversations are generated in batches of 8 by default. Once a batch is
 complete, each conversation row is appended, flushed, and synced individually
 before the progress manifest is updated, so a crash cannot cause a
-manifest-only success. Restarting the same configuration skips every saved
+manifest-only success. Restarting the same configuration skips every successful
 generation key. Use `--checkpoint-batch-size 1` when minimal rework is more
-important than batched throughput; partial conversations are never written.
+important than batched throughput. Provider, truncation, and batch-validation
+failures are retained as failed attempt rows, including any completed turn
+prefix, and remain eligible for retry on the next run.
 
 ## Response format
 

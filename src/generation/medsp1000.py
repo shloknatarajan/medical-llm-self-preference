@@ -8,15 +8,35 @@ import os
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Sequence, TypeVar
+
+from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import ValidationError
 
 
 DEFAULT_INPUT = Path("data/question_sets/medsp1000_generation_cases.jsonl")
 DEFAULT_OUTPUT = Path("data/outputs/medsp1000/generations.jsonl")
+
+
+def project_root(module_path: Path) -> Path:
+    """Resolve the repository root while tolerating Modal's shallow mount."""
+    resolved = module_path.resolve()
+    return resolved.parents[2] if len(resolved.parents) > 2 else resolved.parent
+
+
+PROJECT_ROOT = project_root(Path(__file__))
+QUESTION_SCHEMA = PROJECT_ROOT / (
+    "data/question_sets/schemas/medsp1000_multi_turn_question.schema.json"
+)
+OUTPUT_SCHEMA = PROJECT_ROOT / (
+    "data/outputs/schemas/medsp1000_multiturn_generation.schema.json"
+)
 PATIENT_MODEL = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
 DEFAULT_CLINICIAN_MODEL = "Qwen/Qwen3.5-122B-A10B-FP8"
 DEFAULT_EXCHANGES = 4
+DEFAULT_CLINICIAN_MAX_TOKENS = 1024
 EXPERIMENT_ID = "medsp1000-multiturn-generation-v1"
 PROMPT_VERSION = "medsp1000-multiturn-v2"
 OUTPUT_SCHEMA_VERSION = "1.0"
@@ -96,6 +116,82 @@ class ResumeState:
     highest_attempt_by_key: dict[str, int]
 
 
+@lru_cache(maxsize=None)
+def _schema_validator(path: Path) -> Draft202012Validator:
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+def validate_record(record: Any, schema_path: Path, *, location: str) -> None:
+    """Validate one JSON-compatible record against a committed schema."""
+    try:
+        _schema_validator(schema_path).validate(record)
+    except ValidationError as exc:
+        field_path = ".".join(str(part) for part in exc.absolute_path)
+        detail = f"{field_path}: {exc.message}" if field_path else exc.message
+        raise ValueError(f"schema validation failed at {location}: {detail}") from exc
+
+
+def validate_generation_invariants(record: dict[str, Any], *, location: str) -> None:
+    """Validate relationships that standard JSON Schema cannot express."""
+    turns = record["turns"]
+    if record["turn_count"] != len(turns):
+        raise ValueError(
+            f"invalid output at {location}: turn_count does not match turns"
+        )
+    expected_transcript = "\n".join(
+        f"{turn['role'].upper()}: {turn['content']}" for turn in turns
+    )
+    if record["transcript_text"] != expected_transcript:
+        raise ValueError(
+            f"invalid output at {location}: transcript_text does not match turns"
+        )
+
+    aggregate_fields = {
+        "input_tokens": sum(turn["input_tokens"] for turn in turns),
+        "output_tokens": sum(turn["output_tokens"] for turn in turns),
+        "latency_ms": sum(turn["latency_ms"] for turn in turns),
+    }
+    for role in ("clinician", "patient"):
+        role_turns = [turn for turn in turns if turn["role"] == role]
+        aggregate_fields.update(
+            {
+                f"{role}_input_tokens": sum(
+                    turn["input_tokens"] for turn in role_turns
+                ),
+                f"{role}_output_tokens": sum(
+                    turn["output_tokens"] for turn in role_turns
+                ),
+                f"{role}_latency_ms": sum(turn["latency_ms"] for turn in role_turns),
+            }
+        )
+    for field_name, expected in aggregate_fields.items():
+        if record[field_name] != expected:
+            raise ValueError(
+                f"invalid output at {location}: {field_name} does not match turns"
+            )
+
+    if (
+        record["status"] == "succeeded"
+        and len(turns) != record["exchange_count"] * 2
+    ):
+        raise ValueError(
+            f"invalid output at {location}: succeeded turn count must be twice exchange_count"
+        )
+    for expected_turn, turn in enumerate(turns, start=1):
+        expected_role = "clinician" if expected_turn % 2 else "patient"
+        expected_exchange = (expected_turn + 1) // 2
+        if (
+            turn["turn_index"] != expected_turn
+            or turn["exchange_index"] != expected_exchange
+            or turn["role"] != expected_role
+        ):
+            raise ValueError(
+                f"invalid output at {location}: turn ordering or role alternation is invalid"
+            )
+
+
 def utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -121,7 +217,7 @@ def build_generation_key(
     private_patient_context_sha256: str = "",
     exchanges: int = DEFAULT_EXCHANGES,
     patient_max_tokens: int = 160,
-    clinician_max_tokens: int = 220,
+    clinician_max_tokens: int = DEFAULT_CLINICIAN_MAX_TOKENS,
     clinician_temperature: float | None = 0.2,
     seed: int = 20260824,
 ) -> str:
@@ -170,6 +266,14 @@ def generation_record(
     seed: int,
     error: Exception | None = None,
 ) -> dict[str, Any]:
+    if not run_id.strip():
+        raise ValueError("run_id must be a non-empty string")
+    if attempt < 1:
+        raise ValueError("attempt must be at least 1")
+    if exchanges <= 0:
+        raise ValueError("exchanges must be positive")
+    if patient_max_tokens <= 0 or clinician_max_tokens <= 0:
+        raise ValueError("output token limits must be positive")
     if status not in {"succeeded", "failed"}:
         raise ValueError(f"unsupported generation status: {status}")
     if status == "succeeded" and error is not None:
@@ -190,7 +294,7 @@ def generation_record(
 
     clinician_turns = [turn for turn in turns if turn["role"] == "clinician"]
     patient_turns = [turn for turn in turns if turn["role"] == "patient"]
-    return {
+    record = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "experiment_id": EXPERIMENT_ID,
         "run_id": run_id,
@@ -258,6 +362,9 @@ def generation_record(
         "error_type": type(error).__name__ if error else None,
         "error_message": (str(error) or repr(error)) if error else None,
     }
+    validate_record(record, OUTPUT_SCHEMA, location="generated MedSP1000 record")
+    validate_generation_invariants(record, location="generated MedSP1000 record")
+    return record
 
 
 def load_questions(path: Path) -> list[MedSPQuestion]:
@@ -269,20 +376,23 @@ def load_questions(path: Path) -> list[MedSPQuestion]:
                 continue
             try:
                 raw = json.loads(line)
-                if raw["question_type"] != "multi_turn_standardized_patient":
-                    raise ValueError(f"unsupported question_type: {raw['question_type']}")
+                validate_record(
+                    raw,
+                    QUESTION_SCHEMA,
+                    location=f"{path}:{line_number}",
+                )
                 question = MedSPQuestion(
-                    question_id=str(raw["question_id"]),
-                    source_scenario_path=str(raw["source_scenario_path"]),
-                    selection_reason=str(raw["selection_reason"]),
-                    source_dataset=str(raw["source_dataset"]),
-                    source_revision=str(raw["source_revision"]),
-                    private_patient_context_sha256=str(
-                        raw["private_patient_context_sha256"]
-                    ),
-                    question_text_sha256=str(raw["question_text_sha256"]),
-                    private_patient_context=str(raw["private_patient_context"]).strip(),
-                    question_text=str(raw["question_text"]).strip(),
+                    question_id=raw["question_id"],
+                    source_scenario_path=raw["source_scenario_path"],
+                    selection_reason=raw["selection_reason"],
+                    source_dataset=raw["source_dataset"],
+                    source_revision=raw["source_revision"],
+                    private_patient_context_sha256=raw[
+                        "private_patient_context_sha256"
+                    ],
+                    question_text_sha256=raw["question_text_sha256"],
+                    private_patient_context=raw["private_patient_context"].strip(),
+                    question_text=raw["question_text"].strip(),
                 )
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"invalid question at {path}:{line_number}: {exc}") from exc
@@ -424,6 +534,15 @@ def load_resume_state(path: Path) -> ResumeState:
                 continue
             try:
                 record = json.loads(line)
+                validate_record(
+                    record,
+                    OUTPUT_SCHEMA,
+                    location=f"{path}:{line_number}",
+                )
+                validate_generation_invariants(
+                    record,
+                    location=f"{path}:{line_number}",
+                )
                 if record["experiment_id"] != EXPERIMENT_ID:
                     continue
                 generation_key = str(record["generation_key"])

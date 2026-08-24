@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "artifact": "medsp1000_generation_cases.jsonl",
-  "artifact_sha256": "40df732f35d80783fff972adaf1961c146a3ad06d2c1134169c1a58d6514f8e7",
+  "artifact_sha256": "924326c64115a669d9a8d81a91cef3de8ae839495246775ea9bce90f838f8d35",
   "record_count": 200,
   "question_type": "multi_turn_standardized_patient",
   "source_dataset": "byrLLCC/MedSP1000",

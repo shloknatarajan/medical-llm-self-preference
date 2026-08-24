@@ -15,9 +15,10 @@ experiments:
 
 MedSP1000 uses
 [`schemas/medsp1000_multiturn_generation.schema.json`](schemas/medsp1000_multiturn_generation.schema.json).
-One row stores one complete clinician-patient conversation. Messages are not
-split across JSONL rows, because a partial join could silently mix attempts or
-runs.
+One succeeded row stores one complete clinician-patient conversation. A failed
+row stores the prefix completed before a provider, truncation, or validation
+failure, together with nonempty error details. Messages from one attempt are
+never split across JSONL rows, so joins cannot silently mix attempts or runs.
 
 The ordered `turns` array is the canonical response. Every turn records:
 
@@ -48,8 +49,8 @@ Each invocation also writes `<run_id>.manifest.json` beside the JSONL. The
 manifest stores the question IDs, input artifact hash, model pair, full prompt
 templates (including current-turn controls) and hashes, inference configuration,
 checkpoint batch size, run status, and live completion counts. Each completed
-conversation row is appended and synced individually; partial conversations are
-never written. A `generation_key` includes the prompt version, exchange count,
+conversation or failed-attempt row is appended and synced individually. A
+`generation_key` includes the prompt version, exchange count,
 output caps, sampling configuration, and seed in addition to the question and
 model pair, so resume behavior cannot conflate materially different inputs or
 generation settings.

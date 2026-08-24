@@ -121,6 +121,18 @@
           "error_message": { "const": null }
         }
       }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "failed" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "error_type": { "$ref": "#/$defs/nonEmptyString" },
+          "error_message": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
     }
   ],
   "$defs": {

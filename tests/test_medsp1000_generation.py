@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -22,6 +23,7 @@ from generation.medsp1000 import (
     patient_generation_messages,
     patient_messages,
     patient_turn_prompt,
+    project_root,
     transcript_text,
 )
 from inference import ModelResponse, Provider, TokenUsage
@@ -38,8 +40,13 @@ def _question_file(path: Path) -> Path:
         "private_patient_context": patient_context,
         "source_scenario_path": "source/scenario1",
         "selection_reason": "test",
-        "source_dataset": "dataset",
-        "source_revision": "revision",
+        "source_dataset": "byrLLCC/MedSP1000",
+        "source_revision": "a" * 40,
+        "cohort_index": 1,
+        "selection_seed": 42,
+        "quality_score": 10,
+        "official_q100_member": False,
+        "history_domains": ["present_illness"],
         "private_patient_context_sha256": hashlib.sha256(
             patient_context.encode()
         ).hexdigest(),
@@ -74,6 +81,16 @@ def test_load_question_rejects_changed_embedded_context(tmp_path: Path) -> None:
     record["private_patient_context"] += " Altered."
     path.write_text(json.dumps(record) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="private_patient_context_sha256 mismatch"):
+        load_questions(path)
+
+
+def test_load_question_enforces_committed_schema(tmp_path: Path) -> None:
+    path = _question_file(tmp_path / "questions.jsonl")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["schema_version"] = "1.0"
+    record["unexpected"] = True
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="schema validation failed"):
         load_questions(path)
 
 
@@ -149,6 +166,10 @@ def test_chunked_preserves_order_and_bounds_checkpoint_loss() -> None:
         list(chunked([1], 0))
 
 
+def test_project_root_tolerates_modal_shallow_mount() -> None:
+    assert project_root(Path("/root/modal_medsp1000.py")) == Path("/root")
+
+
 def test_append_jsonl_syncs_each_complete_record(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -194,21 +215,95 @@ def test_api_clinician_batch_normalizes_provider_outputs(monkeypatch) -> None:
     assert result["output_tokens"] == [5, 5]
 
 
-def test_resume_and_transcript(tmp_path: Path) -> None:
-    output = tmp_path / "generations.jsonl"
-    generation_key = build_generation_key("question-1")
-    output.write_text(
-        json.dumps(
-            {
-                "experiment_id": EXPERIMENT_ID,
-                "generation_key": generation_key,
-                "attempt": 2,
-                "status": "succeeded",
+def test_batch_failure_returns_auditable_failed_attempt(
+    tmp_path: Path, monkeypatch
+) -> None:
+    question = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    monkeypatch.setattr(
+        modal_medsp1000,
+        "_generate_api_clinician_batch",
+        lambda *args: {
+            "texts": ["Where does it hurt?"],
+            "input_tokens": [10],
+            "output_tokens": [4],
+            "finish_reasons": ["stop"],
+            "model_versions": ["clinician-model-version"],
+            "latency_ms": [100],
+        },
+    )
+    patient = SimpleNamespace(
+        generate_batch=SimpleNamespace(
+            remote=lambda *args: {
+                "texts": ["My neck hurts."],
+                "input_tokens": [20],
+                "output_tokens": [4],
+                "finish_reasons": ["length"],
+                "latency_ms": [50],
             }
         )
-        + "\n",
-        encoding="utf-8",
     )
+    records = modal_medsp1000._generate_conversation_batch(
+        questions=[question],
+        clinician_remote=None,
+        clinician_model="clinician-model",
+        clinician_temperature=None,
+        patient=patient,
+        run_id="run-1",
+        starting_attempts={question.question_id: 2},
+        exchanges=1,
+        patient_max_tokens=160,
+        clinician_max_tokens=220,
+        batch_number=1,
+        batch_count=1,
+    )
+    assert len(records) == 1
+    assert records[0]["status"] == "failed"
+    assert records[0]["attempt"] == 2
+    assert records[0]["turn_count"] == 1
+    assert records[0]["error_type"] == "RuntimeError"
+    assert "truncated patient batch" in records[0]["error_message"]
+
+
+def test_resume_and_transcript(tmp_path: Path) -> None:
+    output = tmp_path / "generations.jsonl"
+    question = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    turns = [
+        {
+            "turn_index": 1,
+            "exchange_index": 1,
+            "role": "clinician",
+            "content": "Hello",
+            "model": "clinician-model",
+            "finish_reason": "stop",
+            "input_tokens": 10,
+            "output_tokens": 2,
+            "latency_ms": 100,
+        },
+        {
+            "turn_index": 2,
+            "exchange_index": 1,
+            "role": "patient",
+            "content": "Hi",
+            "model": "patient-model",
+            "finish_reason": "stop",
+            "input_tokens": 20,
+            "output_tokens": 1,
+            "latency_ms": 50,
+        },
+    ]
+    record = generation_record(
+        question=question,
+        turns=turns,
+        run_id="run-1",
+        attempt=2,
+        exchanges=1,
+        patient_max_tokens=160,
+        clinician_max_tokens=220,
+        status="succeeded",
+        seed=20260824,
+    )
+    generation_key = record["generation_key"]
+    output.write_text(json.dumps(record) + "\n", encoding="utf-8")
     resume = load_resume_state(output)
     assert resume.succeeded_keys == {generation_key}
     assert resume.highest_attempt_by_key == {generation_key: 2}
@@ -218,6 +313,27 @@ def test_resume_and_transcript(tmp_path: Path) -> None:
             {"role": "patient", "content": "Hi"},
         ]
     ) == "CLINICIAN: Hello\nPATIENT: Hi"
+
+
+def test_resume_rejects_cross_field_corruption(tmp_path: Path) -> None:
+    question = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    record = generation_record(
+        question=question,
+        turns=[],
+        run_id="run-1",
+        attempt=1,
+        exchanges=1,
+        patient_max_tokens=160,
+        clinician_max_tokens=220,
+        status="failed",
+        seed=42,
+        error=RuntimeError("provider failed"),
+    )
+    record["input_tokens"] = 1
+    output = tmp_path / "generations.jsonl"
+    output.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="input_tokens does not match turns"):
+        load_resume_state(output)
 
 
 def test_multiturn_output_matches_schema_and_aggregates_usage(tmp_path: Path) -> None:
@@ -262,7 +378,7 @@ def test_multiturn_output_matches_schema_and_aggregates_usage(tmp_path: Path) ->
             encoding="utf-8"
         )
     )
-
+    medsp1000.validate_record(record, medsp1000.OUTPUT_SCHEMA, location="test record")
     assert set(record) == set(schema["required"])
     assert record["turns"] == turns
     assert record["transcript_text"] == "CLINICIAN: Hello\nPATIENT: My neck hurts."

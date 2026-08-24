@@ -16,6 +16,7 @@ from generation.medsp1000 import (
     CLINICIAN_PROMPT_TEMPLATE_ID,
     CLINICIAN_SYSTEM_PROMPT,
     CLINICIAN_TURN_PROMPT_TEMPLATE,
+    DEFAULT_CLINICIAN_MAX_TOKENS,
     DEFAULT_CLINICIAN_MODEL,
     DEFAULT_EXCHANGES,
     DEFAULT_INPUT,
@@ -41,6 +42,7 @@ from generation.medsp1000 import (
     load_resume_state,
     patient_generation_messages,
     patient_messages,
+    project_root,
     utc_now,
 )
 from inference import ModelResponse, Provider, call_model, resolve_provider
@@ -49,7 +51,7 @@ from inference import ModelResponse, Provider, call_model, resolve_provider
 APP_NAME = "medical-medsp1000-generation"
 MINUTES = 60
 SEED = 20260824
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = project_root(Path(__file__))
 QWEN_27B_CLINICIAN_MODEL = "Qwen/Qwen3.8-27B-FP8"
 TRUNCATED_FINISH_REASONS = frozenset(
     {"incomplete", "length", "max_tokens", "max_output_tokens"}
@@ -109,13 +111,32 @@ def _validate_batch(
 ) -> list[str]:
     texts = result["texts"]
     finish_reasons = result["finish_reasons"]
+    metadata_fields = (
+        "input_tokens",
+        "output_tokens",
+        "finish_reasons",
+        "latency_ms",
+    )
+    if any(
+        not isinstance(result.get(field), list)
+        or len(result[field]) != expected_count
+        for field in metadata_fields
+    ):
+        raise RuntimeError(
+            f"invalid {role} metadata batch at exchange {exchange}"
+        )
     if len(texts) != expected_count or any(not text for text in texts):
         raise RuntimeError(f"invalid {role} batch at exchange {exchange}")
-    if len(finish_reasons) != expected_count or any(not reason for reason in finish_reasons):
+    if len(finish_reasons) != expected_count or any(
+        not reason for reason in finish_reasons
+    ):
         raise RuntimeError(
             f"missing {role} finish reason at exchange {exchange}: {finish_reasons}"
         )
-    if any(str(reason).casefold() in TRUNCATED_FINISH_REASONS for reason in finish_reasons):
+    if any(
+        str(reason).casefold() in TRUNCATED_FINISH_REASONS
+        for reason in finish_reasons
+    ):
         raise RuntimeError(
             f"truncated {role} batch at exchange {exchange}: {finish_reasons}"
         )
@@ -194,6 +215,7 @@ def _write_manifest(
     planned: int,
     skipped: int,
     succeeded: int,
+    failed: int,
     checkpoint_count: int,
     run_status: str,
     created_at: str,
@@ -268,8 +290,8 @@ def _write_manifest(
             "planned": planned,
             "skipped_existing": skipped,
             "succeeded": succeeded,
-            "failed": 0,
-            "remaining": planned - succeeded,
+            "failed": failed,
+            "remaining": planned - succeeded - failed,
         },
         "error_type": type(error).__name__ if error else None,
         "error_message": (str(error) or repr(error)) if error else None,
@@ -307,79 +329,100 @@ def _generate_conversation_batch(
     turns: list[list[dict[str, Any]]] = [[] for _ in questions]
     prior_patient_replies: list[str | None] = [None] * len(questions)
 
-    for exchange in range(1, exchanges + 1):
-        clinician_prompts = [
-            clinician_generation_messages(
-                history, prior_patient_replies[index], exchange, exchanges
+    try:
+        for exchange in range(1, exchanges + 1):
+            clinician_prompts = [
+                clinician_generation_messages(
+                    history, prior_patient_replies[index], exchange, exchanges
+                )
+                for index, history in enumerate(clinician_histories)
+            ]
+            if clinician_remote is None:
+                clinician_result = _generate_api_clinician_batch(
+                    clinician_model, clinician_prompts, clinician_max_tokens
+                )
+            else:
+                clinician_result = clinician_remote.generate_batch.remote(
+                    clinician_prompts, clinician_max_tokens
+                )
+            clinician_texts = _validate_batch(
+                clinician_result, len(questions), "clinician", exchange
             )
-            for index, history in enumerate(clinician_histories)
+
+            patient_prompts: list[list[dict[str, str]]] = []
+            for index, clinician_text in enumerate(clinician_texts):
+                clinician_histories[index] = advance_clinician_history(
+                    clinician_histories[index],
+                    prior_patient_replies[index],
+                    clinician_text,
+                )
+                patient_prompts.append(
+                    patient_generation_messages(patient_histories[index], clinician_text)
+                )
+                turns[index].append(
+                    {
+                        "turn_index": 2 * exchange - 1,
+                        "exchange_index": exchange,
+                        "role": "clinician",
+                        "content": clinician_text,
+                        "model": clinician_result.get(
+                            "model_versions", [clinician_model] * len(questions)
+                        )[index],
+                        "finish_reason": clinician_result["finish_reasons"][index],
+                        "input_tokens": int(clinician_result["input_tokens"][index]),
+                        "output_tokens": int(
+                            clinician_result["output_tokens"][index]
+                        ),
+                        "latency_ms": int(clinician_result["latency_ms"][index]),
+                    }
+                )
+
+            patient_result = patient.generate_batch.remote(
+                patient_prompts, patient_max_tokens
+            )
+            patient_texts = _validate_batch(
+                patient_result, len(questions), "patient", exchange
+            )
+            for index, patient_text in enumerate(patient_texts):
+                patient_histories[index] = advance_patient_history(
+                    patient_histories[index], clinician_texts[index], patient_text
+                )
+                prior_patient_replies[index] = patient_text
+                turns[index].append(
+                    {
+                        "turn_index": 2 * exchange,
+                        "exchange_index": exchange,
+                        "role": "patient",
+                        "content": patient_text,
+                        "model": PATIENT_MODEL,
+                        "finish_reason": patient_result["finish_reasons"][index],
+                        "input_tokens": int(patient_result["input_tokens"][index]),
+                        "output_tokens": int(patient_result["output_tokens"][index]),
+                        "latency_ms": int(patient_result["latency_ms"][index]),
+                    }
+                )
+            print(
+                f"Batch {batch_number}/{batch_count}, exchange {exchange}/{exchanges}: "
+                f"generated {len(questions)} clinician and patient turns"
+            )
+    except Exception as exc:
+        return [
+            generation_record(
+                question=question,
+                turns=turns[index],
+                run_id=run_id,
+                attempt=starting_attempts[question.question_id],
+                exchanges=exchanges,
+                patient_max_tokens=patient_max_tokens,
+                clinician_max_tokens=clinician_max_tokens,
+                clinician_model=clinician_model,
+                clinician_temperature=clinician_temperature,
+                status="failed",
+                seed=SEED,
+                error=exc,
+            )
+            for index, question in enumerate(questions)
         ]
-        if clinician_remote is None:
-            clinician_result = _generate_api_clinician_batch(
-                clinician_model, clinician_prompts, clinician_max_tokens
-            )
-        else:
-            clinician_result = clinician_remote.generate_batch.remote(
-                clinician_prompts, clinician_max_tokens
-            )
-        clinician_texts = _validate_batch(
-            clinician_result, len(questions), "clinician", exchange
-        )
-
-        patient_prompts: list[list[dict[str, str]]] = []
-        for index, clinician_text in enumerate(clinician_texts):
-            clinician_histories[index] = advance_clinician_history(
-                clinician_histories[index],
-                prior_patient_replies[index],
-                clinician_text,
-            )
-            patient_prompts.append(
-                patient_generation_messages(patient_histories[index], clinician_text)
-            )
-            turns[index].append(
-                {
-                    "turn_index": 2 * exchange - 1,
-                    "exchange_index": exchange,
-                    "role": "clinician",
-                    "content": clinician_text,
-                    "model": clinician_result.get(
-                        "model_versions", [clinician_model] * len(questions)
-                    )[index],
-                    "finish_reason": clinician_result["finish_reasons"][index],
-                    "input_tokens": int(clinician_result["input_tokens"][index]),
-                    "output_tokens": int(clinician_result["output_tokens"][index]),
-                    "latency_ms": int(clinician_result["latency_ms"][index]),
-                }
-            )
-
-        patient_result = patient.generate_batch.remote(
-            patient_prompts, patient_max_tokens
-        )
-        patient_texts = _validate_batch(
-            patient_result, len(questions), "patient", exchange
-        )
-        for index, patient_text in enumerate(patient_texts):
-            patient_histories[index] = advance_patient_history(
-                patient_histories[index], clinician_texts[index], patient_text
-            )
-            prior_patient_replies[index] = patient_text
-            turns[index].append(
-                {
-                    "turn_index": 2 * exchange,
-                    "exchange_index": exchange,
-                    "role": "patient",
-                    "content": patient_text,
-                    "model": PATIENT_MODEL,
-                    "finish_reason": patient_result["finish_reasons"][index],
-                    "input_tokens": int(patient_result["input_tokens"][index]),
-                    "output_tokens": int(patient_result["output_tokens"][index]),
-                    "latency_ms": int(patient_result["latency_ms"][index]),
-                }
-            )
-        print(
-            f"Batch {batch_number}/{batch_count}, exchange {exchange}/{exchanges}: "
-            f"generated {len(questions)} clinician and patient turns"
-        )
 
     return [
         generation_record(
@@ -522,7 +565,7 @@ def main(
     num_questions: int = 200,
     smoke_test: bool = False,
     patient_max_tokens: int = 160,
-    clinician_max_tokens: int = 220,
+    clinician_max_tokens: int = DEFAULT_CLINICIAN_MAX_TOKENS,
     checkpoint_batch_size: int = 8,
     clinician_model: str = DEFAULT_CLINICIAN_MODEL,
     run_id: str = "",
@@ -532,6 +575,8 @@ def main(
         raise ValueError("exchanges must be positive")
     if checkpoint_batch_size <= 0:
         raise ValueError("checkpoint_batch_size must be positive")
+    if patient_max_tokens <= 0 or clinician_max_tokens <= 0:
+        raise ValueError("output token limits must be positive")
     _load_dotenv()
     clinician_provider = resolve_provider(clinician_model)[0]
     clinician_temperature = 0.2 if clinician_provider is Provider.MODAL else None
@@ -586,6 +631,7 @@ def main(
     ]
     manifest_created_at = utc_now()
     succeeded = 0
+    failed = 0
     checkpoint_count = 0
 
     def write_progress(run_status: str, error: BaseException | None = None) -> None:
@@ -605,6 +651,7 @@ def main(
             planned=len(pending),
             skipped=skipped,
             succeeded=succeeded,
+            failed=failed,
             checkpoint_count=checkpoint_count,
             run_status=run_status,
             created_at=manifest_created_at,
@@ -629,12 +676,18 @@ def main(
                 batch_count=len(batches),
             )
             append_jsonl(destination, records)
-            succeeded += len(records)
+            batch_succeeded = sum(
+                record["status"] == "succeeded" for record in records
+            )
+            batch_failed = len(records) - batch_succeeded
+            succeeded += batch_succeeded
+            failed += batch_failed
             checkpoint_count += 1
             write_progress("running")
             print(
-                f"Checkpoint {checkpoint_count}: durably saved {succeeded}/"
-                f"{len(pending)} complete conversations to {destination}"
+                f"Checkpoint {checkpoint_count}: durably saved {succeeded} succeeded and "
+                f"{failed} failed attempts for {len(pending)} conversations to "
+                f"{destination}"
             )
     except BaseException as exc:
         write_progress("interrupted", exc)
@@ -642,6 +695,7 @@ def main(
 
     write_progress("completed")
     print(
-        f"Generation complete: {succeeded} succeeded, {skipped} skipped; "
+        f"Generation complete: {succeeded} succeeded, {failed} failed, "
+        f"{skipped} skipped; "
         f"output={destination}; manifest={manifest_path}"
     )

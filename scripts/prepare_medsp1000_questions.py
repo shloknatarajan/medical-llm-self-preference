@@ -247,10 +247,17 @@ def select_role_files(
         chosen = max(pool, key=patient_file_score)
         return (chosen,)
     if role == "clinician":
-        total_characters = sum(len(read_text(path)) for path in files)
+        pool = [
+            path
+            for path in files
+            if not any(term in path.name.lower() for term in AUXILIARY_FILE_TERMS)
+        ]
+        if not pool:
+            return ()
+        total_characters = sum(len(read_text(path)) for path in pool)
         if total_characters <= 16_000:
-            return tuple(sorted(files))
-        chosen = max(files, key=clinician_file_score)
+            return tuple(sorted(pool))
+        chosen = max(pool, key=clinician_file_score)
         return (chosen,)
     raise ValueError(f"unknown role: {role}")
 
@@ -350,6 +357,31 @@ def load_official_subset(path: Path) -> tuple[set[str], str | None]:
     return set(map(str, raw["scenarios"])), revision
 
 
+def verify_source_revision(source: Path) -> None:
+    """Refuse to label source files with a revision they did not come from."""
+    try:
+        revision = subprocess.run(
+            ["git", "-C", str(source), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        changes = subprocess.run(
+            ["git", "-C", str(source), "status", "--porcelain"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(f"cannot verify MedSP1000 source revision at {source}") from exc
+    if revision != DATASET_REVISION:
+        raise ValueError(
+            f"MedSP1000 source revision is {revision}, expected {DATASET_REVISION}"
+        )
+    if changes:
+        raise ValueError(f"MedSP1000 source repository has uncommitted changes: {source}")
+
+
 def build_candidates(args: argparse.Namespace) -> tuple[list[Candidate], Counter[str], str | None]:
     official_subset, official_code_revision = load_official_subset(args.official_subset)
     rejection_counts: Counter[str] = Counter()
@@ -402,6 +434,7 @@ def main() -> None:
     args = parse_args()
     if args.count <= 0:
         raise ValueError("--count must be positive")
+    verify_source_revision(args.source)
     candidates, rejection_counts, code_revision = build_candidates(args)
 
     # Exact duplicate patient cards do not provide independent scenarios.

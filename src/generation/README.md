@@ -25,6 +25,9 @@ the run manifest is updated with progress. If a run is interrupted, the next
 invocation skips every durably saved conversation. Adjust the tradeoff between
 inference batching and potential rework with
 `--checkpoint-batch-size` (use `1` for per-conversation checkpoints).
+Provider, truncation, and batch-validation failures are also appended as failed
+attempt rows, including any turns completed before the failure. They remain
+eligible for a later retry and advance the attempt counter on the next run.
 
 The patient simulator is fixed to
 `mistralai/Mistral-Small-3.1-24B-Instruct-2503` on Modal. The clinician is an
@@ -39,6 +42,12 @@ configuration, and seed at
 `data/outputs/medsp1000/generations.jsonl`; each run writes a separate manifest
 beside it. One JSONL row contains one complete conversation attempt, with
 turn-level model, token, latency, and finish metadata.
+Both question and output rows are validated against their committed JSON
+Schemas. Output loading additionally verifies turn ordering, transcript
+derivation, and token/latency aggregates before resume state is accepted.
+The 1,024-token clinician generation budget leaves room for frontier-model
+reasoning; the prompt itself asks for concise natural messages without imposing
+a response-length scoring target.
 
 ## Real-POCQi single-turn generation
 
