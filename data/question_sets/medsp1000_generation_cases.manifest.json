@@ -1,0 +1,52 @@
+{
+  "schema_version": "2.0",
+  "artifact": "medsp1000_generation_cases.jsonl",
+  "artifact_sha256": "40df732f35d80783fff972adaf1961c146a3ad06d2c1134169c1a58d6514f8e7",
+  "record_count": 200,
+  "question_type": "multi_turn_standardized_patient",
+  "source_dataset": "byrLLCC/MedSP1000",
+  "source_revision": "55e3e55efd08c73baab912ba0c5b42637114fbc8",
+  "official_code_revision": "2806984cb331d6fedc2c0555e3c1c4a54171c77a",
+  "selection_seed": 42,
+  "eligible_unique_scenarios": 217,
+  "official_q100_members_selected": 18,
+  "rejection_counts": {
+    "diagnosis_key_leakage": 7,
+    "duplicate_patient_material": 2,
+    "non_english_named_case": 4,
+    "nonresponsive_patient": 2,
+    "not_strict_core": 1348,
+    "patient_material_length": 12,
+    "pediatric_proxy_or_preverbal": 40,
+    "proxy_or_caregiver": 7
+  },
+  "included_roles": [
+    "sp_actor",
+    "examinee"
+  ],
+  "excluded_roles": [
+    "environment_controller",
+    "evaluator"
+  ],
+  "generation_only": true,
+  "grading_or_judging": false,
+  "record_schema": {
+    "schema_version": "string",
+    "question_id": "string (deterministic from source_scenario_path)",
+    "question_type": "constant: multi_turn_standardized_patient",
+    "question_text": "string (private clinician-visible initialization)",
+    "private_patient_context": "string (private patient-model context)",
+    "source_dataset": "string",
+    "source_revision": "string",
+    "source_scenario_path": "string",
+    "question_text_sha256": "SHA-256 hex string",
+    "private_patient_context_sha256": "SHA-256 hex string",
+    "cohort_index": "integer",
+    "selection_reason": "string",
+    "selection_seed": "integer",
+    "quality_score": "integer",
+    "official_q100_member": "boolean",
+    "history_domains": "array[string]"
+  },
+  "manual_review_note": "The five-case pilot was manually inspected. The expanded cohort passed deterministic structural and leakage screens but is not a substitute for manual review of every source packet."
+}

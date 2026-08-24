@@ -1,0 +1,25 @@
+{
+  "limitation": "The source supplies only the opening patient message. Scores can assess consistency and role adherence, but not accuracy for unobserved patient facts.",
+  "models": {
+    "Qwen/Qwen3.8-27B-FP8": {
+      "completed_cases": 50,
+      "completed_patient_turns": 150,
+      "empty_replies": 0,
+      "mean_case_latency_seconds": 1.0709675395199991,
+      "mean_reply_characters": 201.92,
+      "median_case_latency_seconds": 0.795351217102041
+    },
+    "mistralai/Mistral-Small-3.1-24B-Instruct-2503": {
+      "completed_cases": 50,
+      "completed_patient_turns": 150,
+      "empty_replies": 0,
+      "mean_case_latency_seconds": 0.2654287674,
+      "mean_reply_characters": 207.8,
+      "median_case_latency_seconds": 0.20126956922449005
+    }
+  },
+  "paired_cases_ready_for_review": 50,
+  "requested_cases": 50,
+  "review_seed": 8675309,
+  "sample_seed": 20260823
+}

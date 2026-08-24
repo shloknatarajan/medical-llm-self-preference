@@ -1,6 +1,14 @@
-
+# OS metadata
 .DS_Store
+Thumbs.db
+
+# Local environment variables and secrets
 .env
+.env.*
+.env_*
+.env-*
+!.env.example
+!.env.template
 
 # Python bytecode and caches
 __pycache__/
@@ -13,20 +21,55 @@ __pycache__/
 .pytype/
 .hypothesis/
 .ipynb_checkpoints/
+.pyre/
+.pyright/
 
 # Virtual environments
 .venv/
 venv/
 env/
+ENV/
 
 # Coverage reports
 .coverage
 .coverage.*
 htmlcov/
+coverage.xml
+*.cover
+*.py,cover
 
 # Python build artifacts
 build/
 dist/
 *.egg-info/
 .eggs/
+*.egg
+MANIFEST
 
+# Test, task, and documentation build output
+.tox/
+.nox/
+.coverage_cache/
+site/
+docs/_build/
+
+# Type-checker and profiler output
+dmypy.json
+dmypy.sock
+*.prof
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Re-downloadable benchmark source snapshots
+data/source/medsp1000/
+data/source/medsp1000_repo/
+data/source/medsp1000_code/
+
+# IDE/editor settings
+.idea/
+.vscode/

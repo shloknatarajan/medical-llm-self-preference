@@ -1,0 +1,25 @@
+{
+  "schema_version": "2.0",
+  "artifact": "chatdoctor_healthcaremagic_questions.jsonl",
+  "artifact_sha256": "d76a09668d6930b8004d3784d0d031188f3657a9a0b9eafc63180b7b5570c059",
+  "record_count": 500,
+  "sampling_method": "datasets.Dataset.shuffle(seed).select(range(count))",
+  "sampling_seed": 42,
+  "datasets_version": "4.5.0",
+  "source_dataset": "lavita/ChatDoctor-HealthCareMagic-100k",
+  "source_revision": "505443eac4e99ccedeffbb6f640061223d1d4bb3",
+  "source_file": "data/train-00000-of-00001-5e7cb295b9cff0bf.parquet",
+  "source_split": "train",
+  "record_schema": {
+    "schema_version": "string",
+    "source_dataset": "string",
+    "source_revision": "string",
+    "source_file": "string",
+    "source_split": "string",
+    "source_row_index": "integer",
+    "question_id": "string (deterministic from source_row_index)",
+    "dataset_instruction": "string (source instruction)",
+    "question_text": "string",
+    "reference_doctor_response": "string (private patient-simulator context)"
+  }
+}

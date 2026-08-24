@@ -383,6 +383,7 @@ def write_manifest(
     skipped: int,
     succeeded: int,
     failed: int,
+    metadata: dict[str, Any] | None = None,
 ) -> None:
     """Write run-level configuration and completion counts next to the JSONL."""
 
@@ -411,6 +412,8 @@ def write_manifest(
             "failed": failed,
         },
     }
+    if metadata:
+        manifest.update(metadata)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",

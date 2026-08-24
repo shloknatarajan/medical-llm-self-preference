@@ -1,0 +1,273 @@
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from generation import medsp1000, modal_medsp1000
+from generation.medsp1000 import (
+    EXPERIMENT_ID,
+    PROMPT_VERSION,
+    advance_clinician_history,
+    advance_patient_history,
+    append_jsonl,
+    build_generation_key,
+    chunked,
+    clinician_generation_messages,
+    clinician_messages,
+    clinician_turn_prompt,
+    generation_record,
+    load_questions,
+    load_resume_state,
+    patient_generation_messages,
+    patient_messages,
+    patient_turn_prompt,
+    transcript_text,
+)
+from inference import ModelResponse, Provider, TokenUsage
+
+
+def _question_file(path: Path) -> Path:
+    question_text = "A patient presents with neck pain."
+    patient_context = "Opening statement: My neck hurts."
+    record = {
+        "schema_version": "2.0",
+        "question_id": "question-1",
+        "question_type": "multi_turn_standardized_patient",
+        "question_text": question_text,
+        "private_patient_context": patient_context,
+        "source_scenario_path": "source/scenario1",
+        "selection_reason": "test",
+        "source_dataset": "dataset",
+        "source_revision": "revision",
+        "private_patient_context_sha256": hashlib.sha256(
+            patient_context.encode()
+        ).hexdigest(),
+        "question_text_sha256": hashlib.sha256(question_text.encode()).hexdigest(),
+    }
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    return path
+
+
+def test_role_prompts_keep_material_separate(tmp_path: Path) -> None:
+    question = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    patient_prompt = patient_messages(question)[0]["content"]
+    clinician_prompt = clinician_messages(question, 4)[0]["content"]
+    assert "My neck hurts" in patient_prompt
+    assert "A patient presents" not in patient_prompt
+    assert "A patient presents" in clinician_prompt
+    assert "My neck hurts" not in clinician_prompt
+    assert "rubric" not in patient_prompt.lower()
+
+
+def test_load_question_schema(tmp_path: Path) -> None:
+    question = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    assert question.question_id == "question-1"
+    assert question.source_scenario_path == "source/scenario1"
+    assert question.private_patient_context == "Opening statement: My neck hurts."
+    assert question.question_text == "A patient presents with neck pain."
+
+
+def test_load_question_rejects_changed_embedded_context(tmp_path: Path) -> None:
+    path = _question_file(tmp_path / "questions.jsonl")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["private_patient_context"] += " Altered."
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="private_patient_context_sha256 mismatch"):
+        load_questions(path)
+
+
+def test_clinician_turn_bounds() -> None:
+    assert "turn 1 of 4" in clinician_turn_prompt(None, 1, 4)
+    assert "patient reply" in clinician_turn_prompt("patient reply", 2, 4)
+    with pytest.raises(ValueError):
+        clinician_turn_prompt(None, 5, 4)
+
+
+def test_patient_turn_prompt_preserves_clinician_message_and_repeats_grounding() -> None:
+    prompt = patient_turn_prompt("Have you had a sore throat?")
+    assert "Have you had a sore throat?" in prompt
+    assert "suggested by the clinician are not patient facts" in prompt
+    assert "If the material is silent" in prompt
+    with pytest.raises(ValueError):
+        patient_turn_prompt("  ")
+
+
+def test_only_current_patient_turn_contains_grounding_reminder() -> None:
+    base = [{"role": "system", "content": "patient packet"}]
+    history = advance_patient_history(base, "First question", "First answer")
+    prompt = patient_generation_messages(history, "Second question")
+    assert history == [
+        {"role": "system", "content": "patient packet"},
+        {"role": "user", "content": "First question"},
+        {"role": "assistant", "content": "First answer"},
+    ]
+    assert sum("silently check" in message["content"] for message in prompt) == 1
+    assert "Second question" in prompt[-1]["content"]
+
+
+def test_only_current_clinician_turn_contains_turn_control() -> None:
+    base = [{"role": "system", "content": "clinician packet"}]
+    history = advance_clinician_history(base, None, "Opening question")
+    prompt = clinician_generation_messages(history, "Patient answer", 2, 4)
+    assert "turn 1" not in " ".join(message["content"] for message in history)
+    assert sum("Continue the consultation" in message["content"] for message in prompt) == 1
+    assert prompt[-1]["content"].startswith("Patient answer")
+
+
+def test_generation_key_changes_with_prompt_or_run_configuration() -> None:
+    default_key = build_generation_key("question-1")
+    assert PROMPT_VERSION in default_key
+    assert default_key != build_generation_key("question-1", exchanges=5)
+    assert default_key != build_generation_key("question-1", seed=7)
+    assert default_key != build_generation_key(
+        "question-1", clinician_model="claude-sonnet-5"
+    )
+    assert default_key != build_generation_key(
+        "question-1", clinician_temperature=None
+    )
+    first_inputs = build_generation_key(
+        "question-1",
+        question_text_sha256="a" * 64,
+        private_patient_context_sha256="b" * 64,
+    )
+    second_inputs = build_generation_key(
+        "question-1",
+        question_text_sha256="c" * 64,
+        private_patient_context_sha256="b" * 64,
+    )
+    assert first_inputs != second_inputs
+
+
+def test_chunked_preserves_order_and_bounds_checkpoint_loss() -> None:
+    assert list(chunked(list(range(10)), 4)) == [
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9],
+    ]
+    with pytest.raises(ValueError, match="batch_size must be positive"):
+        list(chunked([1], 0))
+
+
+def test_append_jsonl_syncs_each_complete_record(
+    tmp_path: Path, monkeypatch
+) -> None:
+    sync_calls: list[int] = []
+    monkeypatch.setattr(medsp1000.os, "fsync", sync_calls.append)
+    output = tmp_path / "output.jsonl"
+    append_jsonl(output, [{"id": 1}, {"id": 2}])
+    assert sync_calls and len(sync_calls) == 2
+    assert [json.loads(line) for line in output.read_text().splitlines()] == [
+        {"id": 1},
+        {"id": 2},
+    ]
+
+
+def test_api_clinician_batch_normalizes_provider_outputs(monkeypatch) -> None:
+    def fake_call_model(model, messages, *, max_output_tokens):
+        assert model == "claude-test"
+        assert max_output_tokens == 220
+        return ModelResponse(
+            text=f"Reply to {messages[-1]['content']}",
+            provider=Provider.ANTHROPIC,
+            model="claude-test-20260824",
+            finish_reason="end_turn",
+            usage=TokenUsage(input_tokens=12, output_tokens=5),
+        )
+
+    monkeypatch.setattr(modal_medsp1000, "call_model", fake_call_model)
+    result = modal_medsp1000._generate_api_clinician_batch(
+        "claude-test",
+        [
+            [{"role": "user", "content": "first"}],
+            [{"role": "user", "content": "second"}],
+        ],
+        220,
+    )
+    assert result["texts"] == ["Reply to first", "Reply to second"]
+    assert result["finish_reasons"] == ["end_turn", "end_turn"]
+    assert result["model_versions"] == [
+        "claude-test-20260824",
+        "claude-test-20260824",
+    ]
+    assert result["input_tokens"] == [12, 12]
+    assert result["output_tokens"] == [5, 5]
+
+
+def test_resume_and_transcript(tmp_path: Path) -> None:
+    output = tmp_path / "generations.jsonl"
+    generation_key = build_generation_key("question-1")
+    output.write_text(
+        json.dumps(
+            {
+                "experiment_id": EXPERIMENT_ID,
+                "generation_key": generation_key,
+                "attempt": 2,
+                "status": "succeeded",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    resume = load_resume_state(output)
+    assert resume.succeeded_keys == {generation_key}
+    assert resume.highest_attempt_by_key == {generation_key: 2}
+    assert transcript_text(
+        [
+            {"role": "clinician", "content": "Hello"},
+            {"role": "patient", "content": "Hi"},
+        ]
+    ) == "CLINICIAN: Hello\nPATIENT: Hi"
+
+
+def test_multiturn_output_matches_schema_and_aggregates_usage(tmp_path: Path) -> None:
+    question = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    turns = [
+        {
+            "turn_index": 1,
+            "exchange_index": 1,
+            "role": "clinician",
+            "content": "Hello",
+            "model": "clinician-model",
+            "finish_reason": "stop",
+            "input_tokens": 100,
+            "output_tokens": 10,
+            "latency_ms": 900,
+        },
+        {
+            "turn_index": 2,
+            "exchange_index": 1,
+            "role": "patient",
+            "content": "My neck hurts.",
+            "model": "patient-model",
+            "finish_reason": "stop",
+            "input_tokens": 200,
+            "output_tokens": 6,
+            "latency_ms": 400,
+        },
+    ]
+    record = generation_record(
+        question=question,
+        turns=turns,
+        run_id="medsp1000-test-run",
+        attempt=1,
+        exchanges=1,
+        patient_max_tokens=160,
+        clinician_max_tokens=220,
+        status="succeeded",
+        seed=42,
+    )
+    schema = json.loads(
+        Path("data/outputs/schemas/medsp1000_multiturn_generation.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert set(record) == set(schema["required"])
+    assert record["turns"] == turns
+    assert record["transcript_text"] == "CLINICIAN: Hello\nPATIENT: My neck hurts."
+    assert record["input_tokens"] == 300
+    assert record["output_tokens"] == 16
+    assert record["latency_ms"] == 1300
+    assert record["clinician_input_tokens"] == 100
+    assert record["patient_input_tokens"] == 200

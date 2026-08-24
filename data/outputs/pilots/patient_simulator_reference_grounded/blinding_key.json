@@ -1,0 +1,202 @@
+{
+  "chatdoctor-hcm-000096": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-001071": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-003326": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-004279": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-004669": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-006891": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-020414": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-022629": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-023548": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-024508": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-027001": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-027801": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-029189": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-030378": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-035622": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-037076": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-040274": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-040494": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-040876": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-047343": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-048987": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-051875": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-051876": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-052088": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-053660": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-054236": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-055831": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-057312": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-057320": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-058731": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-063207": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-066964": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-067732": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-070705": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-073218": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-076605": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-081840": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-084524": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-086069": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-087820": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-091931": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-094800": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-097148": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-098236": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-100523": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-100532": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-100992": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-106114": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  },
+  "chatdoctor-hcm-108506": {
+    "A": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+    "B": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "chatdoctor-hcm-109261": {
+    "A": "Qwen/Qwen3.8-27B-FP8",
+    "B": "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+  }
+}

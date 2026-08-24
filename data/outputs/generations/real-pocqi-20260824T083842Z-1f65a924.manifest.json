@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "real_pocqi_single_turn_v1",
+  "run_id": "real-pocqi-20260824T083842Z-1f65a924",
+  "created_at": "2026-08-24T08:39:10.723592Z",
+  "input": "data/question_sets/real_pocqi_questions.jsonl",
+  "output": "data/outputs/generations/real_pocqi_generations.jsonl",
+  "models": [
+    "gemini-3.1-pro-preview",
+    "gemini-3.7-flash"
+  ],
+  "question_ids": [
+    "0cc25bb6-21af-4f52-bcc6-4c61b7422aa3"
+  ],
+  "question_count": 1,
+  "sample_seed": 42,
+  "shuffle": true,
+  "prompt_template_id": "specialist_answer_v1",
+  "temperature": null,
+  "max_output_tokens": 16384,
+  "retries": 2,
+  "retry_delay_seconds": 2.0,
+  "force": false,
+  "logical_generations": {
+    "planned": 2,
+    "skipped_existing": 0,
+    "succeeded": 2,
+    "failed": 0
+  }
+}

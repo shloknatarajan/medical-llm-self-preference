@@ -1,0 +1,10 @@
+{
+  "experiment_id": "medsp1000-generation-only-mistral-baseline-v1",
+  "completed_cases": 1,
+  "patient_model": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+  "clinician_model": "Qwen/Qwen3.5-122B-A10B-FP8",
+  "exchange_count": 4,
+  "generation_only": true,
+  "environment_controller_used": false,
+  "grading_or_judging_performed": false
+}

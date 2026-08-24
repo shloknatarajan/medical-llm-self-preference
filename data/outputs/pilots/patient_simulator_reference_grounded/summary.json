@@ -1,0 +1,25 @@
+{
+  "limitation": "The simulator receives the source doctor response as a private reference note, matching the original pipeline. That note is not a structured patient record, so accuracy for facts absent from both source fields remains untestable.",
+  "models": {
+    "Qwen/Qwen3.8-27B-FP8": {
+      "completed_cases": 50,
+      "completed_patient_turns": 150,
+      "empty_replies": 0,
+      "mean_case_latency_seconds": 1.0700206969199997,
+      "mean_reply_characters": 234.89333333333335,
+      "median_case_latency_seconds": 0.8506652093877551
+    },
+    "mistralai/Mistral-Small-3.1-24B-Instruct-2503": {
+      "completed_cases": 50,
+      "completed_patient_turns": 150,
+      "empty_replies": 0,
+      "mean_case_latency_seconds": 0.46027596406000093,
+      "mean_reply_characters": 378.1066666666667,
+      "median_case_latency_seconds": 0.344024963306123
+    }
+  },
+  "paired_cases_ready_for_review": 50,
+  "requested_cases": 50,
+  "review_seed": 8675309,
+  "sample_seed": 20260823
+}

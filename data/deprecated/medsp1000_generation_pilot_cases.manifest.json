@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "artifact": "medsp1000_generation_pilot_cases.jsonl",
+  "artifact_sha256": "96e231dbfeefec697524449c627e3348995c277129ffe559f7e352d1cd33b38c",
+  "record_count": 5,
+  "source_dataset": "byrLLCC/MedSP1000",
+  "source_revision": "55e3e55efd08c73baab912ba0c5b42637114fbc8",
+  "selection": "manually curated generation-only pilot",
+  "included_roles": [
+    "sp_actor",
+    "examinee"
+  ],
+  "excluded_roles": [
+    "environment_controller",
+    "evaluator"
+  ],
+  "grading_or_judging": false
+}

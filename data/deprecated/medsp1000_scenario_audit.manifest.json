@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "artifact": "medsp1000_scenario_audit.jsonl",
+  "artifact_sha256": "28a88091a80a6ab3cce67f3092b059f39c925a2ec7d22463b5783be99cd6debf",
+  "source_dataset": "byrLLCC/MedSP1000",
+  "source_revision": "55e3e55efd08c73baab912ba0c5b42637114fbc8",
+  "source_directory": "data/source/medsp1000_repo",
+  "scenario_count": 1639,
+  "category_counts": {
+    "likely_direct_patient": 509,
+    "needs_manual_review": 1050,
+    "nonpatient_role": 3,
+    "procedure_or_task_simulation": 46,
+    "proxy_or_caregiver": 31
+  },
+  "strict_core_candidate_count": 291,
+  "strict_core_candidate_fraction": 0.17754728492983526,
+  "likely_direct_patient_fraction": 0.3105552165954851,
+  "screening_note": "Deterministic screen, not a final clinical-content adjudication. The strict core requires an explicit patient actor, conditional interaction instructions, at least four history domains, and at least 2,000 actor characters while excluding detected proxies and clinician roles. Manual review is still required."
+}

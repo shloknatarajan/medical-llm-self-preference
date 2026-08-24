@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "medsp1000_multi_turn_question.schema.json",
+  "title": "MedSP1000 multi-turn standardized-patient question",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "question_id",
+    "question_type",
+    "question_text",
+    "private_patient_context",
+    "source_dataset",
+    "source_revision",
+    "source_scenario_path",
+    "question_text_sha256",
+    "private_patient_context_sha256",
+    "cohort_index",
+    "selection_reason",
+    "selection_seed",
+    "quality_score",
+    "official_q100_member",
+    "history_domains"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0"
+    },
+    "question_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "question_type": {
+      "const": "multi_turn_standardized_patient"
+    },
+    "question_text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Clinician-visible examinee or triage initialization."
+    },
+    "private_patient_context": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Patient-model-only standardized-patient actor material."
+    },
+    "source_dataset": {
+      "const": "byrLLCC/MedSP1000"
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_scenario_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "question_text_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "private_patient_context_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "cohort_index": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "selection_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selection_seed": {
+      "type": "integer"
+    },
+    "quality_score": {
+      "type": "integer"
+    },
+    "official_q100_member": {
+      "type": "boolean"
+    },
+    "history_domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
