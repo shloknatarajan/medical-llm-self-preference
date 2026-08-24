@@ -174,10 +174,22 @@ def test_append_jsonl_syncs_each_complete_record(
     tmp_path: Path, monkeypatch
 ) -> None:
     sync_calls: list[int] = []
+    lock_calls: list[int] = []
     monkeypatch.setattr(medsp1000.os, "fsync", sync_calls.append)
+    monkeypatch.setattr(
+        medsp1000.fcntl,
+        "flock",
+        lambda _file_descriptor, operation: lock_calls.append(operation),
+    )
     output = tmp_path / "output.jsonl"
     append_jsonl(output, [{"id": 1}, {"id": 2}])
     assert sync_calls and len(sync_calls) == 2
+    assert lock_calls == [
+        medsp1000.fcntl.LOCK_EX,
+        medsp1000.fcntl.LOCK_UN,
+        medsp1000.fcntl.LOCK_EX,
+        medsp1000.fcntl.LOCK_UN,
+    ]
     assert [json.loads(line) for line in output.read_text().splitlines()] == [
         {"id": 1},
         {"id": 2},

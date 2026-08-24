@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -529,31 +530,37 @@ def load_resume_state(path: Path) -> ResumeState:
     succeeded: set[str] = set()
     highest_attempt: dict[str, int] = {}
     with path.open(encoding="utf-8") as input_file:
-        for line_number, line in enumerate(input_file, start=1):
-            if not line.strip():
-                continue
-            try:
-                record = json.loads(line)
-                validate_record(
-                    record,
-                    OUTPUT_SCHEMA,
-                    location=f"{path}:{line_number}",
-                )
-                validate_generation_invariants(
-                    record,
-                    location=f"{path}:{line_number}",
-                )
-                if record["experiment_id"] != EXPERIMENT_ID:
+        fcntl.flock(input_file.fileno(), fcntl.LOCK_SH)
+        try:
+            for line_number, line in enumerate(input_file, start=1):
+                if not line.strip():
                     continue
-                generation_key = str(record["generation_key"])
-                attempt = int(record["attempt"])
-                highest_attempt[generation_key] = max(
-                    attempt, highest_attempt.get(generation_key, 0)
-                )
-                if record["status"] == "succeeded":
-                    succeeded.add(generation_key)
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-                raise ValueError(f"invalid output at {path}:{line_number}: {exc}") from exc
+                try:
+                    record = json.loads(line)
+                    validate_record(
+                        record,
+                        OUTPUT_SCHEMA,
+                        location=f"{path}:{line_number}",
+                    )
+                    validate_generation_invariants(
+                        record,
+                        location=f"{path}:{line_number}",
+                    )
+                    if record["experiment_id"] != EXPERIMENT_ID:
+                        continue
+                    generation_key = str(record["generation_key"])
+                    attempt = int(record["attempt"])
+                    highest_attempt[generation_key] = max(
+                        attempt, highest_attempt.get(generation_key, 0)
+                    )
+                    if record["status"] == "succeeded":
+                        succeeded.add(generation_key)
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"invalid output at {path}:{line_number}: {exc}"
+                    ) from exc
+        finally:
+            fcntl.flock(input_file.fileno(), fcntl.LOCK_UN)
     return ResumeState(frozenset(succeeded), highest_attempt)
 
 
@@ -561,9 +568,13 @@ def append_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as output_file:
         for record in records:
-            output_file.write(json.dumps(record, ensure_ascii=False) + "\n")
-            output_file.flush()
-            os.fsync(output_file.fileno())
+            fcntl.flock(output_file.fileno(), fcntl.LOCK_EX)
+            try:
+                output_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                output_file.flush()
+                os.fsync(output_file.fileno())
+            finally:
+                fcntl.flock(output_file.fileno(), fcntl.LOCK_UN)
 
 
 def transcript_text(turns: Sequence[dict[str, Any]]) -> str:
