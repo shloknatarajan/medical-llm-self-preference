@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "real_pocqi_combined_all_judges_smoke_v1",
+  "run_id": "combined-six-judge-smoke-20260824",
+  "created_at": "2026-08-24T12:39:22.395336Z",
+  "input_generations": "data/outputs/generations/real_pocqi_generations.jsonl",
+  "output_dir": "data/real_pcoqi/judgements",
+  "question_count": 1,
+  "question_ids": [
+    "a7b54210-dd30-4339-89bc-53ed8aab5b65"
+  ],
+  "generator_models": [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "gemini-3.1-pro-preview",
+    "gemini-3.7-flash",
+    "Qwen/Qwen3.5-122B-A10B-FP8",
+    "Qwen/Qwen3.8-27B-FP8"
+  ],
+  "judge_models": [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "gemini-3.1-pro-preview",
+    "gemini-3.7-flash"
+  ],
+  "judging_cases": [
+    "rubric_and_model_ranking"
+  ],
+  "presentation_seed": 42,
+  "temperature": null,
+  "max_output_tokens": 4096,
+  "retries": 2,
+  "retry_delay_seconds": 1.0,
+  "force": false,
+  "provider_concurrency": {
+    "openai": 2,
+    "anthropic": 2,
+    "gemini": 2
+  },
+  "logical_judgments": {
+    "total": 6,
+    "pending_at_start": 6,
+    "skipped_existing": 0,
+    "succeeded": 5,
+    "failed": 1
+  }
+}
