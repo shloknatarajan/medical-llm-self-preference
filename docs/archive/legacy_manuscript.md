@@ -1,11 +1,14 @@
-# Med-Self-Preference First Draft
+# Med-Self-Preference first draft (legacy manuscript)
 
-Zara Ansari<sup>1,2</sup>, Shlok Natarajan<sup>1</sup>, Author Two<sup>1</sup>, Author Three<sup>1</sup>, Aaron Fanous<sup>1</sup>, Roxana Daneshjou<sup>1,3</sup>
+> Archived for provenance. The current experiment record, corrected claims,
+> and expanded results are in [`../experiment.md`](../experiment.md). The raw
+> generations and judgments underlying this legacy four-model draft are not
+> present in this repository.
+
+Zara Ansari<sup>1,2</sup>, Shlok Natarajan<sup>1</sup>, Aaron Fanous<sup>1</sup>, Roxana Daneshjou<sup>1,3</sup>
 
 <sup>1</sup> Department of Biomedical Data Science, <sup>3</sup> Department of Dermatology, Stanford University, 450 Jane Stanford Way, Stanford, CA 94305, USA.<br>
 <sup>2</sup> Department of Computer Science, Harvey Mudd College, 301 Platt Boulevard, Claremont, CA 91711, USA.
-
-Emails: zansari6@stanford.edu, insert email, author2@stanford.edu, author3@stanford.edu, author4@stanford.edu, roxanad@stanford.edu
 
 June 2026
 

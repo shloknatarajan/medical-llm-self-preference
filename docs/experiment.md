@@ -1,16 +1,16 @@
-# Med-Self-Preference: Updated Draft and Complete Experiment Compendium
+# Medical LLM self-preference: experiment, methods, and results
 
-Zara Ansari<sup>1,2</sup>, Shlok Natarajan<sup>1</sup>, Author Two<sup>1</sup>, Author Three<sup>1</sup>, Aaron Fanous<sup>1</sup>, Roxana Daneshjou<sup>1,3</sup>
+Zara Ansari<sup>1,2</sup>, Shlok Natarajan<sup>1</sup>, Aaron Fanous<sup>1</sup>, Roxana Daneshjou<sup>1,3</sup>
 
 <sup>1</sup> Department of Biomedical Data Science, <sup>3</sup> Department of Dermatology, Stanford University, 450 Jane Stanford Way, Stanford, CA 94305, USA.<br>
 <sup>2</sup> Department of Computer Science, Harvey Mudd College, 301 Platt Boulevard, Claremont, CA 91711, USA.
 
-Emails: zansari6@stanford.edu, insert email, author2@stanford.edu, author3@stanford.edu, author4@stanford.edu, roxanad@stanford.edu
-
-Updated August 24, 2026. This document was derived from
-`Med_Self_Preference_First_Draft.md` and reconciled against the result artifacts
-and QA reports in this repository. Final production-result counts are current
-through 12:25 PDT on August 24, 2026.
+Updated August 24, 2026. This is the canonical scientific record for the
+project. It consolidates the legacy manuscript, expanded-cohort analysis,
+execution QA, specialty analysis, and experiment summaries, and is reconciled
+against the retained result artifacts. Final production-result counts are
+current through 12:25 PDT on August 24, 2026. The original four-model manuscript
+is retained at `docs/archive/legacy_manuscript.md` for provenance.
 
 ## Abstract
 
@@ -124,6 +124,14 @@ draft. Consequently, the legacy tables below are a faithful carry-forward of
 reported results, not a fresh reanalysis. They should not be pooled with the
 expanded experiments.
 
+The legacy manuscript states that response order used a fixed seed but does not
+report it or list the selected question IDs. An adjacent implementation used
+seed 42 for both question sampling and deterministic A/B placement, but the
+exact legacy subset cannot be reconstructed from this repository because its
+frozen question manifest and dataset revision were not retained. Provider-side
+generation seeds were not set, so regenerated text would not be guaranteed to
+match even if the sample were recovered.
+
 ### 3.2 Expanded Real-POCQi cohort
 
 The frozen Real-POCQi artifact contains all 620 questions from source revision
@@ -153,8 +161,27 @@ The patient simulator is fixed to
 `mistralai/Mistral-Small-3.1-24B-Instruct-2503`. Six API models—Sol, Terra,
 Opus, Sonnet, Gemini Pro, and Gemini Flash—have complete clinician generations
 and are the six candidate generators and judges in the current multi-turn
-results. Although the broader cohort document proposes two Qwen clinicians and
-judges, full MedSP1000 Qwen generations and judgments have not yet been run.
+results. Although the initial expanded-cohort plan proposed two Qwen clinicians
+and judges, full MedSP1000 Qwen generations and judgments have not yet been run.
+
+### 3.4 Model-selection and evaluation safeguards
+
+The expanded cohort was selected to provide two capability tiers from each of
+four model families while avoiding small models whose generation or judging
+quality could obscure the target effect. Stable, exact endpoints were preferred;
+Gemini Pro was the preview-endpoint exception. Provider aliases such as
+`latest` were avoided, and open-weight runs record their repository, weight
+format, quantization, inference engine, and engine version. Run artifacts retain
+the exact model identifier, reasoning configuration, output cap, and generation
+parameters. External retrieval and tools were disabled.
+
+The intended safeguard for future cohorts is a common held-out medical judging
+gate covering physician agreement, safety-critical error recognition, rubric
+and structured-output compliance, test-retest consistency, and completion
+reliability. A model that fails that gate may remain a generator but should not
+be treated as a primary judge. The completed expanded experiments did not add a
+blinded physician-validation matrix, which remains a limitation rather than an
+implied completed check.
 
 ## 4. Evaluation and analysis
 
@@ -682,8 +709,8 @@ on a single LLM judge or raw own-win rate.
 
 # Appendix A. Complete specialty-specific analysis
 
-This appendix incorporates the findings from
-`docs/real_pocqi_self_preference_by_specialty.md` into the updated draft.
+This appendix contains the complete specialty analysis; the former standalone
+specialty report has been consolidated here.
 
 ## A.1 Specialty estimand and overall result
 

@@ -28,9 +28,12 @@ tables.
 - `data/analysis/`: derived, reproducible analysis tables.
 - `data/deprecated/`: historical inputs and pilot outputs retained only for
   provenance.
-- `docs/`: experiment design, quality assurance, and result writeups.
+- `docs/`: canonical experiment record, focused design/QA notes, manuscript
+  source, and the archived legacy draft.
 - `leaderboard/`: static results explorer.
 
+Start with [`docs/README.md`](docs/README.md) for the documentation map and
+[`docs/experiment.md`](docs/experiment.md) for the complete methods and results.
 See [`src/generation/README.md`](src/generation/README.md) for generation and
 judging commands, [`data/outputs/README.md`](data/outputs/README.md) for the
 saved-output format, and

@@ -1,8 +1,10 @@
-# Real-POCQi generation QA
+# Real-POCQi four-model generation spot checks
 
-QA performed on August 23, 2026 after completing the 620-question, four-model
-generation run. This is a research-data spot check, not a substitute for the
-planned blinded physician evaluation.
+QA performed on August 23, 2026 after completing the initial 620-question,
+four-model generation run, before the two Qwen models were added. Current
+eight-model corpus counts and conclusions are in [`experiment.md`](experiment.md).
+This is a research-data spot check, not a substitute for blinded physician
+evaluation.
 
 ## Corpus integrity
 

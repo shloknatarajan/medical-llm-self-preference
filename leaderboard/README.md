@@ -5,10 +5,8 @@ file server. The page has no build step and no JavaScript dependency.
 
 ## Result sources
 
-- `docs/New_Experiments_Self_Preference_Analysis.md` supplies the primary,
-  position-adjusted self-preference results.
-- `docs/Med_Self_Preference_Updated_Experiment_Compendium.md` supplies aggregate
-  Real-POCQi generator performance and experiment counts.
+- `docs/experiment.md` supplies the primary position-adjusted self-preference
+  results, aggregate generator performance, and experiment counts.
 - `data/analysis/self_preference/` contains the generated model-, pairwise-, and
   question-level secondary score artifacts.
 

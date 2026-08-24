@@ -1,4 +1,7 @@
-# MedSP1000 Multi-Turn Generation Setup
+# MedSP1000 multi-turn generation design
+
+This document explains the role boundary and prompt design. For current CLI
+commands and runtime behavior, see [`../src/generation/README.md`](../src/generation/README.md).
 
 This setup creates realistic, text-only conversations between a fixed
 standardized-patient simulator and a clinician model under evaluation. It uses

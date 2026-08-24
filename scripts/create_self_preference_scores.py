@@ -489,7 +489,7 @@ def main() -> None:
         write_csv(OUTPUT_DIR / filename, rows)
 
     manifest = {
-        "methodology": "Med_Self_Preference_First_Draft.md sections 3.1-3.3",
+        "methodology": "docs/archive/legacy_manuscript.md sections 3.1-3.3",
         "generator_script": str(Path(__file__).relative_to(ROOT)),
         "sources": sources,
         "outputs": {

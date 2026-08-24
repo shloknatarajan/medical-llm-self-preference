@@ -1,6 +1,6 @@
 {
   "generator_script": "scripts/create_self_preference_scores.py",
-  "methodology": "Med_Self_Preference_First_Draft.md sections 3.1-3.3",
+  "methodology": "docs/archive/legacy_manuscript.md sections 3.1-3.3",
   "outputs": {
     "model_scores.csv": {
       "rows": 46,
