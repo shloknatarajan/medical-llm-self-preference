@@ -17,6 +17,9 @@ from statistics import fmean, stdev
 ROOT = Path(__file__).resolve().parents[1]
 REAL = ROOT / "data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl"
 DIRECT = ROOT / "data/real_pcoqi/judgements/direct_ranking.jsonl"
+IDENTITY_REVEALED = (
+    ROOT / "data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl"
+)
 MED = {
     2: ROOT / "data/outputs/medsp1000/judgements/rubric_and_model_ranking_2_turns.jsonl",
     4: ROOT / "data/outputs/medsp1000/judgements/rubric_and_model_ranking_4_turns.jsonl",
@@ -251,6 +254,75 @@ def ranking_condition_comparison(direct_records: list[dict], combined_records: l
     }
 
 
+def identity_condition_comparison(
+    revealed_records: list[dict], combined_records: list[dict]
+) -> dict:
+    """Compare revealed and blinded ranks on identical question-judge cells."""
+
+    revealed_keys = {(row["question_id"], row["judge_model"]) for row in revealed_records}
+    blinded_records = [
+        row
+        for row in combined_records
+        if (row["question_id"], row["judge_model"]) in revealed_keys
+    ]
+    if len(blinded_records) != len(revealed_records):
+        raise ValueError("Identity conditions do not have identical question-judge cells")
+
+    revealed_ranks, revealed_positions = position_adjust(long_ranks(revealed_records), "rank")
+    blinded_ranks, blinded_positions = position_adjust(long_ranks(blinded_records), "rank")
+    revealed_effects = {
+        (row["question"], row["judge"]): row["effect"]
+        for row in matched_effects(revealed_ranks, "rank", lower_is_better=True)
+    }
+    blinded_effects = {
+        (row["question"], row["judge"]): row["effect"]
+        for row in matched_effects(blinded_ranks, "rank", lower_is_better=True)
+    }
+    shared = sorted(set(revealed_effects) & set(blinded_effects))
+    if len(shared) != len(revealed_records):
+        raise ValueError("Identity comparison is missing matched effects")
+
+    differences = [
+        {
+            "question": question,
+            "judge": judge,
+            "effect": revealed_effects[(question, judge)]
+            - blinded_effects[(question, judge)],
+        }
+        for question, judge in shared
+    ]
+    revealed_summary = summarize_effects(
+        [
+            {"question": question, "judge": judge, "effect": effect}
+            for (question, judge), effect in revealed_effects.items()
+        ]
+    )
+    blinded_summary = summarize_effects(
+        [
+            {"question": question, "judge": judge, "effect": effect}
+            for (question, judge), effect in blinded_effects.items()
+        ]
+    )
+    change_summary = summarize_effects(differences)
+    change_summary["holm_p_by_judge"] = holm(
+        {judge: result["p_normal"] for judge, result in change_summary["by_judge"].items()}
+    )
+    for summary in (revealed_summary, blinded_summary, change_summary):
+        summary.pop("question_effects", None)
+    return {
+        "questions": len({question for question, _ in shared}),
+        "judges": len({judge for _, judge in shared}),
+        "matched_question_judge_cells": len(shared),
+        "revealed": revealed_summary,
+        "matched_blinded": blinded_summary,
+        "revealed_minus_blinded": change_summary,
+        "position_rank_effects": {
+            "revealed": revealed_positions,
+            "blinded": blinded_positions,
+        },
+    }
+
+
 def repeated_measures_anova(question_by_length: dict[int, dict[str, float]]) -> dict:
     lengths = sorted(question_by_length)
     questions = sorted(set.intersection(*(set(question_by_length[x]) for x in lengths)))
@@ -386,6 +458,9 @@ def hotelling_length_test(question_by_length: dict[int, dict[str, float]]) -> di
 def main() -> None:
     real_records = read_production(REAL, "real_pocqi_combined_all_judges_v1")
     direct_records = read_production(DIRECT, "real_pocqi_direct_ranking_random100_v1")
+    identity_records = read_production(
+        IDENTITY_REVEALED, "real_pocqi_identity_revealed_random200_v1"
+    )
     med_records = {
         length: read_production(path, "medsp1000_all_judges_v1") for length, path in MED.items()
     }
@@ -393,6 +468,7 @@ def main() -> None:
     real = analyze_records(real_records)
     direct = analyze_records(direct_records, include_rubric=False)
     direct_comparison = ranking_condition_comparison(direct_records, real_records)
+    identity_comparison = identity_condition_comparison(identity_records, real_records)
     med = {length: analyze_records(records) for length, records in med_records.items()}
     med_question_effects = {
         length: result["rank"]["question_effects"] for length, result in med.items()
@@ -424,11 +500,13 @@ def main() -> None:
                 "record_counts": {
                     "real_pocqi": len(real_records),
                     "direct_ranking": len(direct_records),
+                    "identity_revealed": len(identity_records),
                     "medsp1000": {str(k): len(v) for k, v in med_records.items()},
                 },
                 "real_pocqi": real,
                 "direct_ranking": direct,
                 "direct_vs_combined": direct_comparison,
+                "identity_revealed_vs_blinded": identity_comparison,
                 "medsp1000": med,
                 "medsp1000_repeated_measures": med_repeated,
             },

@@ -11,12 +11,10 @@ from inference import ModelResponse, Provider, TokenUsage
 from judging.judge_medsp1000 import judge_medsp1000_trajectories
 from judging.judge_real_pocqi import PocqiJudgingSettings, PocqiResponseInput
 from judging.real_pocqi import (
-    DirectRankingOutput,
     PocqiJudgingCase,
     RealPocqiScores,
     ResponseRanking,
     RubricAndModelRankingOutput,
-    RubricScoringOutput,
     ScoredPocqiResponse,
 )
 from judging.run_medsp1000_judging import (
@@ -48,15 +46,11 @@ class FakeJudgeCaller:
             )
             for response_id, score in (("response-1", 4), ("response-2", 5))
         ]
-        if response_format is DirectRankingOutput:
-            parsed = DirectRankingOutput(ranking=ranking)
-        elif response_format is RubricScoringOutput:
-            parsed = RubricScoringOutput(scored_responses=scored)
-        else:
-            parsed = RubricAndModelRankingOutput(
-                scored_responses=scored,
-                model_ranking=ranking,
-            )
+        assert response_format is RubricAndModelRankingOutput
+        parsed = RubricAndModelRankingOutput(
+            scored_responses=scored,
+            model_ranking=ranking,
+        )
         return ModelResponse(
             text=parsed.model_dump_json(),
             parsed=parsed,
@@ -92,7 +86,7 @@ def test_medsp_judge_uses_full_blinded_trajectories_and_resumes(
     tmp_path: Path,
 ) -> None:
     caller = FakeJudgeCaller()
-    paths = {case: tmp_path / f"{case.value}.jsonl" for case in PocqiJudgingCase}
+    paths = output_paths(tmp_path)
     settings = PocqiJudgingSettings(
         experiment_id="medsp-judge-test",
         run_id="run-1",
@@ -109,11 +103,11 @@ def test_medsp_judge_uses_full_blinded_trajectories_and_resumes(
         output_paths=paths,
     )
 
-    assert list(records) == list(PocqiJudgingCase)
-    assert len(caller.calls) == 3
-    assert "multi-turn clinician trajectories" in caller.calls[1]["system"]
-    assert "Do not require formal citations" in caller.calls[1]["system"]
-    assert "evaluate only the clinician's behavior" in caller.calls[1]["system"]
+    assert list(records) == [PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING]
+    assert len(caller.calls) == 1
+    assert "multi-turn clinician trajectories" in caller.calls[0]["system"]
+    assert "Do not require formal citations" in caller.calls[0]["system"]
+    assert "evaluate only the clinician's behavior" in caller.calls[0]["system"]
     for call in caller.calls:
         visible = call["system"] + "\n" + call["input"]
         assert "Evaluate and manage this patient." in visible
@@ -143,7 +137,7 @@ def test_medsp_judge_uses_full_blinded_trajectories_and_resumes(
         model_caller=caller,
         output_paths=paths,
     )
-    assert len(caller.calls) == 3
+    assert len(caller.calls) == 1
     assert {
         case: record.judgment_id for case, record in resumed.items()
     } == {case: record.judgment_id for case, record in records.items()}
@@ -289,18 +283,18 @@ def test_medsp_batch_runner_dry_run_and_resume(tmp_path: Path, capsys) -> None:
     dry_caller = FakeJudgeCaller()
     assert run(parse_args([*common, "--dry-run"]), model_caller=dry_caller) == 0
     assert not dry_caller.calls
-    assert "12 logical judgments, 12 pending, 0 skipped" in capsys.readouterr().out
+    assert "4 logical judgments, 4 pending, 0 skipped" in capsys.readouterr().out
 
     caller = FakeJudgeCaller()
     assert run(
         parse_args([*common, "--run-id", "medsp-run-1"]), model_caller=caller
     ) == 0
-    assert len(caller.calls) == 12
+    assert len(caller.calls) == 4
     manifest = json.loads(
         (output_dir / "medsp-run-1.manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["question_count"] == 2
-    assert manifest["logical_judgments"]["succeeded"] == 12
+    assert manifest["logical_judgments"]["succeeded"] == 4
 
     resumed_caller = FakeJudgeCaller()
     assert run(
@@ -311,7 +305,7 @@ def test_medsp_batch_runner_dry_run_and_resume(tmp_path: Path, capsys) -> None:
     resumed = json.loads(
         (output_dir / "medsp-run-2.manifest.json").read_text(encoding="utf-8")
     )
-    assert resumed["logical_judgments"]["skipped_existing"] == 12
+    assert resumed["logical_judgments"]["skipped_existing"] == 4
 
 
 def test_partial_view_uses_distinct_prompt_and_output(tmp_path: Path) -> None:
@@ -332,7 +326,6 @@ def test_partial_view_uses_distinct_prompt_and_output(tmp_path: Path) -> None:
         view_turn_count=2,
         model_caller=caller,
         output_paths=paths,
-        judging_cases=(PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING,),
     )
 
     record = records[PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING]

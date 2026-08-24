@@ -11,5 +11,7 @@ tectonic main.tex
 ```
 
 Before submission, replace the placeholder author names and email address in
-the title block. The identity-revealed experiment is explicitly labeled as an
-in-progress snapshot and should be updated when that run completes.
+the title block. The manuscript includes the completed 1,200-judgment
+identity-revealed experiment and its paired comparison with the blinded
+condition, plus the fixed-effects token-length sensitivity for model scoring
+and matched self-preference.

@@ -1,0 +1,540 @@
+{
+  "conditions": [
+    {
+      "dataset": "real_pocqi",
+      "length_measure": "provider-neutral lexical tokens in clinician/answer text",
+      "model_scoring_association": {
+        "rank": {
+          "ci95": [
+            -1.425506319298099,
+            -1.201932899522824
+          ],
+          "clustered_se": 0.05703403565695789,
+          "n_observations": 39680,
+          "n_question_clusters": 620,
+          "p_normal": 2.130160371732549e-117,
+          "slope_per_length_doubling": -1.3137196094104615
+        },
+        "rubric_z": {
+          "ci95": [
+            0.534065451132362,
+            0.6355068389687356
+          ],
+          "clustered_se": 0.025877905060299397,
+          "n_observations": 39680,
+          "n_question_clusters": 620,
+          "p_normal": 4.5454249600391327e-113,
+          "slope_per_length_doubling": 0.5847861450505488
+        }
+      },
+      "models": 8,
+      "provider_reported_token_sensitivity": {
+        "model_scoring_association": {
+          "rank": {
+            "ci95": [
+              -1.3470136171687417,
+              -1.1423673523350606
+            ],
+            "clustered_se": 0.052205679804510505,
+            "n_observations": 39680,
+            "n_question_clusters": 620,
+            "p_normal": 1.224390222229152e-125,
+            "slope_per_length_doubling": -1.2446904847519011
+          },
+          "rubric_z": {
+            "ci95": [
+              0.499911840796265,
+              0.5997899115043417
+            ],
+            "clustered_se": 0.025479099670427743,
+            "n_observations": 39680,
+            "n_question_clusters": 620,
+            "p_normal": 2.7408423426201416e-103,
+            "slope_per_length_doubling": 0.5498508761503034
+          }
+        },
+        "self_preference_length_moderation": {
+          "rank": {
+            "ci95": [
+              0.5046083035954912,
+              0.6478739289520857
+            ],
+            "clustered_se": 0.0365473534072945,
+            "n_observations": 4960,
+            "n_question_clusters": 620,
+            "p_normal": 5.25070619539824e-56,
+            "slope_per_length_doubling": 0.5762411162737885
+          },
+          "rubric_z": {
+            "ci95": [
+              0.2004699146382664,
+              0.2764119071781746
+            ],
+            "clustered_se": 0.019372957280588816,
+            "n_observations": 4960,
+            "n_question_clusters": 620,
+            "p_normal": 8.210675929011973e-35,
+            "slope_per_length_doubling": 0.2384409109082205
+          }
+        }
+      },
+      "provider_vs_lexical_log_correlation": 0.7411162498255973,
+      "questions": 620,
+      "self_preference_length_moderation": {
+        "rank": {
+          "ci95": [
+            0.45076082065437173,
+            0.6251294559119608
+          ],
+          "clustered_se": 0.04448179470856863,
+          "n_observations": 4960,
+          "n_question_clusters": 620,
+          "p_normal": 1.1416865959669038e-33,
+          "slope_per_length_doubling": 0.5379451382831663
+        },
+        "rubric_z": {
+          "ci95": [
+            0.19176122149107164,
+            0.2743418979877809
+          ],
+          "clustered_se": 0.021066499106303385,
+          "n_observations": 4960,
+          "n_question_clusters": 620,
+          "p_normal": 1.9036240533626805e-28,
+          "slope_per_length_doubling": 0.23305155973942626
+        }
+      },
+      "turns": null
+    },
+    {
+      "dataset": "medsp1000",
+      "length_measure": "provider-neutral lexical tokens in clinician/answer text",
+      "model_scoring_association": {
+        "rank": {
+          "ci95": [
+            -1.556947483077249,
+            -1.1443945161283802
+          ],
+          "clustered_se": 0.10524310381348694,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 1.0600644309075055e-37,
+          "slope_per_length_doubling": -1.3506709996028146
+        },
+        "rubric_z": {
+          "ci95": [
+            0.615242346816171,
+            0.8730835735524758
+          ],
+          "clustered_se": 0.06577582314701652,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 1.1235059206230075e-29,
+          "slope_per_length_doubling": 0.7441629601843234
+        }
+      },
+      "models": 6,
+      "provider_reported_token_sensitivity": {
+        "model_scoring_association": {
+          "rank": {
+            "ci95": [
+              -1.4275010600842917,
+              -0.9129703929019916
+            ],
+            "clustered_se": 0.13125782326079083,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 4.853995784612619e-19,
+            "slope_per_length_doubling": -1.1702357264931416
+          },
+          "rubric_z": {
+            "ci95": [
+              0.5100072861314789,
+              0.8066390221573928
+            ],
+            "clustered_se": 0.07567136123110046,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 3.32568508049711e-18,
+            "slope_per_length_doubling": 0.6583231541444359
+          }
+        },
+        "self_preference_length_moderation": {
+          "rank": {
+            "ci95": [
+              -0.3446461736985209,
+              -0.13645648527121493
+            ],
+            "clustered_se": 0.05310961439472092,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 5.916912409664957e-06,
+            "slope_per_length_doubling": -0.24055132948486793
+          },
+          "rubric_z": {
+            "ci95": [
+              -0.1955412840233297,
+              -0.06312451261420592
+            ],
+            "clustered_se": 0.03377978862477648,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 0.00012881848795741034,
+            "slope_per_length_doubling": -0.12933289831876782
+          }
+        }
+      },
+      "provider_vs_lexical_log_correlation": 0.6790619787680494,
+      "questions": 200,
+      "self_preference_length_moderation": {
+        "rank": {
+          "ci95": [
+            -0.37123029742209873,
+            -0.14606601604386632
+          ],
+          "clustered_se": 0.05743986769852867,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 6.702047482707892e-06,
+          "slope_per_length_doubling": -0.2586481567329825
+        },
+        "rubric_z": {
+          "ci95": [
+            -0.22804247760585333,
+            -0.0819405509088737
+          ],
+          "clustered_se": 0.03727089966759685,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 3.203262515441944e-05,
+          "slope_per_length_doubling": -0.15499151425736352
+        }
+      },
+      "turns": 2
+    },
+    {
+      "dataset": "medsp1000",
+      "length_measure": "provider-neutral lexical tokens in clinician/answer text",
+      "model_scoring_association": {
+        "rank": {
+          "ci95": [
+            -2.3854192446168625,
+            -1.7835310876577568
+          ],
+          "clustered_se": 0.1535428971834453,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 5.569469780796918e-42,
+          "slope_per_length_doubling": -2.0844751661373095
+        },
+        "rubric_z": {
+          "ci95": [
+            0.9976107463924486,
+            1.3694568556062632
+          ],
+          "clustered_se": 0.09485870133005474,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 9.991233598969145e-36,
+          "slope_per_length_doubling": 1.183533800999356
+        }
+      },
+      "models": 6,
+      "provider_reported_token_sensitivity": {
+        "model_scoring_association": {
+          "rank": {
+            "ci95": [
+              -1.6578774135100698,
+              -1.0461694757610305
+            ],
+            "clustered_se": 0.1560479433033263,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 4.5487732431958825e-18,
+            "slope_per_length_doubling": -1.3520234446355501
+          },
+          "rubric_z": {
+            "ci95": [
+              0.5888469451801077,
+              0.9615041674402791
+            ],
+            "clustered_se": 0.0950656179235131,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 3.51759053728424e-16,
+            "slope_per_length_doubling": 0.7751755563101934
+          }
+        },
+        "self_preference_length_moderation": {
+          "rank": {
+            "ci95": [
+              -0.4145090045735637,
+              -0.18020418039130776
+            ],
+            "clustered_se": 0.05977163882200408,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 6.528884999717261e-07,
+            "slope_per_length_doubling": -0.29735659248243573
+          },
+          "rubric_z": {
+            "ci95": [
+              -0.2361941254970658,
+              -0.0965089551206904
+            ],
+            "clustered_se": 0.03563397203478965,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 3.0364131398614352e-06,
+            "slope_per_length_doubling": -0.1663515403088781
+          }
+        }
+      },
+      "provider_vs_lexical_log_correlation": 0.6546918370204019,
+      "questions": 200,
+      "self_preference_length_moderation": {
+        "rank": {
+          "ci95": [
+            -0.42069685009145175,
+            -0.1922492126584282
+          ],
+          "clustered_se": 0.05827745852883253,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 1.4495070386146863e-07,
+          "slope_per_length_doubling": -0.30647303137494
+        },
+        "rubric_z": {
+          "ci95": [
+            -0.24295213532140755,
+            -0.10136276113902185
+          ],
+          "clustered_se": 0.03611973831183309,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 1.8764136702663819e-06,
+          "slope_per_length_doubling": -0.1721574482302147
+        }
+      },
+      "turns": 4
+    },
+    {
+      "dataset": "medsp1000",
+      "length_measure": "provider-neutral lexical tokens in clinician/answer text",
+      "model_scoring_association": {
+        "rank": {
+          "ci95": [
+            -2.662087632408022,
+            -2.043277187058625
+          ],
+          "clustered_se": 0.1578598074870912,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 3.1220149427818214e-50,
+          "slope_per_length_doubling": -2.3526824097333234
+        },
+        "rubric_z": {
+          "ci95": [
+            1.1364057832949828,
+            1.504368322036034
+          ],
+          "clustered_se": 0.09386799457679874,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 6.108048116209366e-45,
+          "slope_per_length_doubling": 1.3203870526655084
+        }
+      },
+      "models": 6,
+      "provider_reported_token_sensitivity": {
+        "model_scoring_association": {
+          "rank": {
+            "ci95": [
+              -1.711957874953031,
+              -1.1106397986616663
+            ],
+            "clustered_se": 0.15339746844167468,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 3.570360850010335e-20,
+            "slope_per_length_doubling": -1.4112988368073487
+          },
+          "rubric_z": {
+            "ci95": [
+              0.5982439239817521,
+              0.9552841242601526
+            ],
+            "clustered_se": 0.09108168374448994,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 1.486253475211174e-17,
+            "slope_per_length_doubling": 0.7767640241209524
+          }
+        },
+        "self_preference_length_moderation": {
+          "rank": {
+            "ci95": [
+              -0.5050642509485685,
+              -0.22981986021180675
+            ],
+            "clustered_se": 0.07021540580019435,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 1.6671856885155326e-07,
+            "slope_per_length_doubling": -0.36744205558018767
+          },
+          "rubric_z": {
+            "ci95": [
+              -0.2947615232674832,
+              -0.1353592938989545
+            ],
+            "clustered_se": 0.04066383402258385,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 1.2316242318133398e-07,
+            "slope_per_length_doubling": -0.21506040858321887
+          }
+        }
+      },
+      "provider_vs_lexical_log_correlation": 0.6696206045175959,
+      "questions": 200,
+      "self_preference_length_moderation": {
+        "rank": {
+          "ci95": [
+            -0.4530314882683561,
+            -0.2146358232703634
+          ],
+          "clustered_se": 0.060815220662753244,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 4.035047660708666e-08,
+          "slope_per_length_doubling": -0.33383365576935975
+        },
+        "rubric_z": {
+          "ci95": [
+            -0.2606471184552354,
+            -0.11778061561732027
+          ],
+          "clustered_se": 0.036445536438243664,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 2.0839561875535283e-07,
+          "slope_per_length_doubling": -0.18921386703627785
+        }
+      },
+      "turns": 6
+    },
+    {
+      "dataset": "medsp1000",
+      "length_measure": "provider-neutral lexical tokens in clinician/answer text",
+      "model_scoring_association": {
+        "rank": {
+          "ci95": [
+            -2.6083905317713016,
+            -1.9502942699230605
+          ],
+          "clustered_se": 0.1678816994510819,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 5.477045560208107e-42,
+          "slope_per_length_doubling": -2.279342400847181
+        },
+        "rubric_z": {
+          "ci95": [
+            1.1757792792448185,
+            1.586342710508718
+          ],
+          "clustered_se": 0.10473556919997436,
+          "n_observations": 7200,
+          "n_question_clusters": 200,
+          "p_normal": 1.0540622567788979e-39,
+          "slope_per_length_doubling": 1.3810609948767683
+        }
+      },
+      "models": 6,
+      "provider_reported_token_sensitivity": {
+        "model_scoring_association": {
+          "rank": {
+            "ci95": [
+              -1.3757152986276462,
+              -0.6577870686108995
+            ],
+            "clustered_se": 0.18314495663692518,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 2.830345036537348e-08,
+            "slope_per_length_doubling": -1.0167511836192729
+          },
+          "rubric_z": {
+            "ci95": [
+              0.3788875646991761,
+              0.8125138848787321
+            ],
+            "clustered_se": 0.11061895922947855,
+            "n_observations": 7200,
+            "n_question_clusters": 200,
+            "p_normal": 7.238048673267912e-08,
+            "slope_per_length_doubling": 0.5957007247889541
+          }
+        },
+        "self_preference_length_moderation": {
+          "rank": {
+            "ci95": [
+              -0.43874434921926253,
+              -0.07998547291178057
+            ],
+            "clustered_se": 0.09152012150701071,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 0.004597422564950531,
+            "slope_per_length_doubling": -0.25936491106552156
+          },
+          "rubric_z": {
+            "ci95": [
+              -0.17186750073587304,
+              0.026459103733712894
+            ],
+            "clustered_se": 0.05059352154836375,
+            "n_observations": 1200,
+            "n_question_clusters": 200,
+            "p_normal": 0.15071064748644258,
+            "slope_per_length_doubling": -0.07270419850108006
+          }
+        }
+      },
+      "provider_vs_lexical_log_correlation": 0.646202257291384,
+      "questions": 200,
+      "self_preference_length_moderation": {
+        "rank": {
+          "ci95": [
+            -0.42745014197951425,
+            -0.1204900103160064
+          ],
+          "clustered_se": 0.07830615603660915,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 0.0004675249576199333,
+          "slope_per_length_doubling": -0.2739700761477603
+        },
+        "rubric_z": {
+          "ci95": [
+            -0.17036798595164698,
+            0.014986245445363866
+          ],
+          "clustered_se": 0.047284242703319095,
+          "n_observations": 1200,
+          "n_question_clusters": 200,
+          "p_normal": 0.10037042165739156,
+          "slope_per_length_doubling": -0.07769087025314156
+        }
+      },
+      "turns": 8
+    }
+  ],
+  "method": {
+    "caution": "Associations are observational and may reflect answer quality or style; provider token counts are not used as the primary cross-provider measure because tokenizers differ.",
+    "model_scoring": "OLS slope per length doubling after absorbing question-judge list, generator-model, and presentation-position fixed effects; standard errors clustered by question.",
+    "primary_length": "Provider-neutral lexical tokens computed from exact answer text; for MedSP1000, clinician turns only within each judged prefix.",
+    "self_preference": "Within-model moderation of the matched own-minus-outside effect; the exact answer, and therefore its length, is already held fixed in the primary contrast."
+  }
+}

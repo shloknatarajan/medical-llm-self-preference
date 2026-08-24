@@ -56,8 +56,8 @@ prompt itself asks for concise natural messages without imposing a
 response-length scoring target. Qwen reasoning remains disabled until a
 comparable open-weight reasoning condition is selected for that cohort.
 
-Judge complete MedSP1000 trajectories with the same three blinded conditions
-and five-axis rubric used for Real-POCQi:
+Judge complete MedSP1000 trajectories with blinded five-axis rubric scoring
+and an independent model ranking:
 
 ```bash
 uv run python -m judging.run_medsp1000_judging --dry-run
@@ -66,8 +66,7 @@ uv run python -m judging.run_medsp1000_judging
 
 The runner treats each full clinician-patient transcript as one candidate,
 scores only clinician behavior, and writes append-only, resumable outputs under
-`data/outputs/medsp1000/judgements/`. Use `--num-questions` for a pilot and
-`--judging-cases` to select a subset of the three conditions.
+`data/outputs/medsp1000/judgements/`.
 
 To judge a prefix of each trajectory instead, pass an even role-turn count no
 greater than the generated trajectory length. Prefix views have distinct
@@ -76,8 +75,7 @@ with full-trajectory judgments:
 
 ```bash
 uv run python -m judging.run_medsp1000_judging \
-  --view-turn-count 2 \
-  --judging-cases rubric_and_model_ranking
+  --view-turn-count 2
 ```
 
 For example, the combined condition writes 2-, 4-, and 6-turn views to

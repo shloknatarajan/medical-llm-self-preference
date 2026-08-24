@@ -1,7 +1,7 @@
 [project]
 name = "medical-llm-self-preference"
 version = "0.1.0"
-description = "Add your description here"
+description = "Experiments measuring self-preference in medical language models"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

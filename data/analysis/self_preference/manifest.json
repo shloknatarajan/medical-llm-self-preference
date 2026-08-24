@@ -1,0 +1,83 @@
+{
+  "generator_script": "scripts/create_self_preference_scores.py",
+  "methodology": "Med_Self_Preference_First_Draft.md sections 3.1-3.3",
+  "outputs": {
+    "model_scores.csv": {
+      "rows": 46,
+      "sha256": "c1fc7f3180485a18963413845b609448e7e6b0212bc4b7621b8d57b36d0986fe"
+    },
+    "pairwise_scores.csv": {
+      "rows": 274,
+      "sha256": "4a591cda9193e33b0e6ec988c924e39d0ccf5d23d5e2e99d1c2aedcca869eca2"
+    },
+    "question_model_scores.csv": {
+      "rows": 11760,
+      "sha256": "bcefc8d1133ec0e32a937d6fcabeb6cbf5a40308a71e30d7ac4988487f8f9fac"
+    }
+  },
+  "sources": [
+    {
+      "condition": "rubric_and_ranking",
+      "dataset": "real_pocqi",
+      "experiment_id": "real_pocqi_combined_all_judges_v1",
+      "path": "data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl",
+      "sha256": "1d812cfb5f6380d1b118f03314df7e12604688a0f653f565a43e1ae50272d7f9",
+      "successful_logical_judgments": 4960,
+      "turns": null
+    },
+    {
+      "condition": "direct_ranking",
+      "dataset": "real_pocqi",
+      "experiment_id": "real_pocqi_direct_ranking_random100_v1",
+      "path": "data/real_pcoqi/judgements/direct_ranking.jsonl",
+      "sha256": "027c3dfe8f15915b300e17fd256b1d7157de9f5224dadbbe2098c0d3968ed627",
+      "successful_logical_judgments": 800,
+      "turns": null
+    },
+    {
+      "condition": "identity_revealed_rubric_and_ranking",
+      "dataset": "real_pocqi",
+      "experiment_id": "real_pocqi_identity_revealed_random200_v1",
+      "path": "data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl",
+      "sha256": "d03b81d3a76fbc088c7434ba6cd4b421f6392eca6b844c12c712a163e439a1a9",
+      "successful_logical_judgments": 1200,
+      "turns": null
+    },
+    {
+      "condition": "rubric_and_ranking",
+      "dataset": "medsp1000",
+      "experiment_id": "medsp1000_all_judges_v1",
+      "path": "data/outputs/medsp1000/judgements/rubric_and_model_ranking_2_turns.jsonl",
+      "sha256": "1311334d1627c37b4545280f51f46e80620a08c0b5972b2417c890eb82a2bd32",
+      "successful_logical_judgments": 1200,
+      "turns": 2
+    },
+    {
+      "condition": "rubric_and_ranking",
+      "dataset": "medsp1000",
+      "experiment_id": "medsp1000_all_judges_v1",
+      "path": "data/outputs/medsp1000/judgements/rubric_and_model_ranking_4_turns.jsonl",
+      "sha256": "056025c561037f409959ba9c3a777280c10bdd00e8f4b782bb279b5789b97df2",
+      "successful_logical_judgments": 1200,
+      "turns": 4
+    },
+    {
+      "condition": "rubric_and_ranking",
+      "dataset": "medsp1000",
+      "experiment_id": "medsp1000_all_judges_v1",
+      "path": "data/outputs/medsp1000/judgements/rubric_and_model_ranking_6_turns.jsonl",
+      "sha256": "33766c5605b31f0663262ffdde7b2a3d4ee9160f85f8736380d0dd36ed58449e",
+      "successful_logical_judgments": 1200,
+      "turns": 6
+    },
+    {
+      "condition": "rubric_and_ranking",
+      "dataset": "medsp1000",
+      "experiment_id": "medsp1000_all_judges_v1",
+      "path": "data/outputs/medsp1000/judgements/rubric_and_model_ranking.jsonl",
+      "sha256": "667703c43b9988141a52345855307ea6cdd4088e16179342d8843fa3e3b80710",
+      "successful_logical_judgments": 1200,
+      "turns": 8
+    }
+  ]
+}

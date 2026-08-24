@@ -1,4 +1,4 @@
-"""Run three blinded judging conditions across MedSP1000 trajectories."""
+"""Run blinded rubric-and-ranking judging across MedSP1000 trajectories."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from inference import Provider, call_model
 from generation.generate_real_pocqi import load_dotenv
 
 from .judge_medsp1000 import (
+    MEDSP1000_JUDGING_CASES,
     build_medsp1000_judgment_keys,
     judge_medsp1000_trajectories,
 )
@@ -83,12 +84,6 @@ def output_paths(
 ) -> dict[PocqiJudgingCase, Path]:
     suffix = "" if view_turn_count is None else f"_{view_turn_count}_turns"
     return {
-        PocqiJudgingCase.DIRECT_RANKING: (
-            output_dir / f"direct_ranking{suffix}.jsonl"
-        ),
-        PocqiJudgingCase.RUBRIC_SUM_RANKING: (
-            output_dir / f"rubric_sum_ranking{suffix}.jsonl"
-        ),
         PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING: (
             output_dir / f"rubric_and_model_ranking{suffix}.jsonl"
         ),
@@ -280,7 +275,6 @@ def plan_jobs(
     settings: PocqiJudgingSettings,
     paths: dict[PocqiJudgingCase, Path],
     tracker: PocqiResumeTracker,
-    judging_cases: Sequence[PocqiJudgingCase],
     view_turn_count: int | None = None,
 ) -> list[PlannedJob]:
     jobs: list[PlannedJob] = []
@@ -292,7 +286,6 @@ def plan_jobs(
                 judge_model=judge_model,
                 settings=settings,
                 view_turn_count=view_turn_count,
-                judging_cases=judging_cases,
             )
             pending = tuple(
                 case
@@ -330,7 +323,7 @@ def write_manifest(
         "question_ids": [question.question_id for question in questions],
         "generator_models": list(args.generator_models),
         "judge_models": list(judge_models),
-        "judging_cases": list(args.judging_cases),
+        "judging_cases": [case.value for case in MEDSP1000_JUDGING_CASES],
         "exchange_count": args.exchange_count,
         "view_turn_count": args.view_turn_count,
         "reasoning_effort": args.reasoning_effort,
@@ -363,12 +356,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--generator-models", nargs="+", default=DEFAULT_GENERATOR_MODELS)
     parser.add_argument("--judge-models", nargs="+", default=DEFAULT_JUDGE_MODELS)
-    parser.add_argument(
-        "--judging-cases",
-        nargs="+",
-        choices=[case.value for case in PocqiJudgingCase],
-        default=[case.value for case in PocqiJudgingCase],
-    )
     parser.add_argument("--num-questions", type=int, default=None)
     parser.add_argument("--exchange-count", type=int, default=4)
     parser.add_argument(
@@ -411,7 +398,6 @@ def run(args: argparse.Namespace, *, model_caller: ModelCaller = call_model) -> 
         raise ValueError("--retry-delay-seconds cannot be negative")
 
     judge_models = validate_judge_models(args.judge_models)
-    judging_cases = tuple(PocqiJudgingCase(value) for value in args.judging_cases)
     questions = load_latest_question_trajectories(
         args.input_generations,
         questions_path=args.input_questions,
@@ -443,10 +429,9 @@ def run(args: argparse.Namespace, *, model_caller: ModelCaller = call_model) -> 
         settings=settings,
         paths=paths,
         tracker=tracker,
-        judging_cases=judging_cases,
         view_turn_count=args.view_turn_count,
     )
-    total_logical = len(jobs) * len(judging_cases)
+    total_logical = len(jobs)
     pending_logical = sum(len(job.pending_cases) for job in jobs)
     skipped = total_logical - pending_logical
     pending_jobs = [job for job in jobs if job.pending_cases]
@@ -481,7 +466,6 @@ def run(args: argparse.Namespace, *, model_caller: ModelCaller = call_model) -> 
             model_caller=limited_caller,
             output_paths=paths,
             resume_tracker=tracker,
-            judging_cases=job.pending_cases,
         )
 
     with ThreadPoolExecutor(max_workers=args.max_concurrency) as executor:

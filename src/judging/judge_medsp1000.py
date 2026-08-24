@@ -1,4 +1,4 @@
-"""Judge complete MedSP1000 clinician trajectories under three conditions."""
+"""Judge MedSP1000 clinician trajectories with rubric scoring and ranking."""
 
 from __future__ import annotations
 
@@ -19,23 +19,15 @@ from .judge_real_pocqi import (
     judge_ranked_responses,
 )
 from .real_pocqi import (
-    DirectRankingOutput,
     PocqiJudgingCase,
     PocqiJudgmentRecord,
     PocqiResponseCandidate,
     RubricAndModelRankingOutput,
-    RubricScoringOutput,
 )
 
 
-DIRECT_RANKING_PROMPT_ID = "medsp1000_direct_ranking_v1"
-RUBRIC_SUM_PROMPT_ID = "medsp1000_rubric_sum_ranking_v1"
 RUBRIC_AND_RANKING_PROMPT_ID = "medsp1000_rubric_and_model_ranking_v1"
-
-DIRECT_RANKING_SYSTEM_PROMPT = (
-    "You are evaluating several clinician trajectories from the same "
-    "standardized-patient scenario."
-)
+MEDSP1000_JUDGING_CASES = (PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING,)
 
 RUBRIC_SYSTEM_PROMPT = """You are an expert US physician evaluating multi-turn clinician trajectories from the same standardized-patient scenario.
 
@@ -48,16 +40,6 @@ Give each trajectory an absolute score from 0 to 5 on each axis, where 0 is the 
 
 Score every trajectory independently and evaluate only the clinician's behavior. Patient turns provide conversational context and evidence about what information was available; do not score the patient. Use only the scenario initialization and candidate trajectories. Do not infer or identify which model produced a trajectory."""
 
-DIRECT_RANKING_INSTRUCTION = (
-    "Rank all candidate clinician trajectories from best-performing to "
-    "worst-performing based on the quality of the clinician's behavior across "
-    "the complete encounter. Return every response ID exactly once."
-)
-RUBRIC_SUM_INSTRUCTION = (
-    "Score every candidate clinician trajectory on all five rubric axes. Do "
-    "not provide a ranking; it will be calculated deterministically from the "
-    "score sums."
-)
 RUBRIC_AND_RANKING_INSTRUCTION = (
     "First score every candidate clinician trajectory on all five rubric "
     "axes. Then rank all trajectories from best-performing to "
@@ -105,20 +87,6 @@ TASK:
 
 MEDSP1000_JUDGING_PROFILE = JudgingTaskProfile(
     conditions=(
-        JudgingCondition(
-            case=PocqiJudgingCase.DIRECT_RANKING,
-            prompt_template_id=DIRECT_RANKING_PROMPT_ID,
-            system_prompt=DIRECT_RANKING_SYSTEM_PROMPT,
-            instruction=DIRECT_RANKING_INSTRUCTION,
-            output_type=DirectRankingOutput,
-        ),
-        JudgingCondition(
-            case=PocqiJudgingCase.RUBRIC_SUM_RANKING,
-            prompt_template_id=RUBRIC_SUM_PROMPT_ID,
-            system_prompt=RUBRIC_SYSTEM_PROMPT,
-            instruction=RUBRIC_SUM_INSTRUCTION,
-            output_type=RubricScoringOutput,
-        ),
         JudgingCondition(
             case=PocqiJudgingCase.RUBRIC_AND_MODEL_RANKING,
             prompt_template_id=RUBRIC_AND_RANKING_PROMPT_ID,
@@ -176,7 +144,6 @@ def build_medsp1000_judgment_keys(
     judge_model: str,
     settings: PocqiJudgingSettings,
     view_turn_count: int | None = None,
-    judging_cases: Sequence[PocqiJudgingCase] = tuple(PocqiJudgingCase),
 ) -> dict[PocqiJudgingCase, str]:
     """Build stable MedSP1000 keys without making a model call."""
 
@@ -186,7 +153,7 @@ def build_medsp1000_judgment_keys(
         judge_model=judge_model,
         settings=settings,
         profile=medsp1000_judging_profile(view_turn_count),
-        judging_cases=judging_cases,
+        judging_cases=MEDSP1000_JUDGING_CASES,
     )
 
 
@@ -202,7 +169,6 @@ def judge_medsp1000_trajectories(
     model_caller: ModelCaller = call_model,
     output_paths: Mapping[PocqiJudgingCase, str | Path] | None = None,
     resume_tracker: PocqiResumeTracker | None = None,
-    judging_cases: Sequence[PocqiJudgingCase] = tuple(PocqiJudgingCase),
 ) -> dict[PocqiJudgingCase, PocqiJudgmentRecord]:
     """Judge complete identity-blinded trajectories and append every attempt."""
 
@@ -217,5 +183,5 @@ def judge_medsp1000_trajectories(
         model_caller=model_caller,
         output_paths=output_paths,
         resume_tracker=resume_tracker,
-        judging_cases=judging_cases,
+        judging_cases=MEDSP1000_JUDGING_CASES,
     )

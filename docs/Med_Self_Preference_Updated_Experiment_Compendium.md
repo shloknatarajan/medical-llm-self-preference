@@ -9,8 +9,8 @@ Emails: zansari6@stanford.edu, insert email, author2@stanford.edu, author3@stanf
 
 Updated August 24, 2026. This document was derived from
 `Med_Self_Preference_First_Draft.md` and reconciled against the result artifacts
-and QA reports in this repository. Live-result counts are a snapshot at 11:19
-PDT on August 24, 2026 unless a later cutoff is stated.
+and QA reports in this repository. Final production-result counts are current
+through 12:25 PDT on August 24, 2026.
 
 ## Abstract
 
@@ -27,14 +27,21 @@ eight judges produced 4,960 rubric-plus-ranking judgments over eight candidate
 answers. A matched analysis found that judges placed their own answers 1.219
 rank positions higher than other judges placed the same answers. The effect was
 largest for `gpt-5.6-sol` (−2.939 positions) and `gpt-5.6-terra` (−2.224), but
-was negative for all eight judges. A no-rubric ranking condition on 100 questions
+was negative for all eight judges. A draft-compatible raw-score analysis found
+SP-Bias values from −0.749 to +0.668 points on the 0–5 scale, while listwise
+own-pick rates ranged from 18.8% to 99.4%, showing that the measures are not
+interchangeable. A no-rubric ranking condition on 100 questions
 closely reproduced the aggregate order. Specialty explained only 5.7% of
 question-level self-preference variation and did not show significant global
-heterogeneity (`p=0.190`). In MedSP1000, completed 2-, 4-, 6-, and 8-turn
-conditions all show matched self-preference, but the effect is not monotonic
-with conversation length. An identity-revealed
-Real-POCQi follow-up is in progress; preliminary paired results do not show that
-displaying generator names increases self-preference. Overall, self-preference
+heterogeneity (`p=0.190`). In MedSP1000, the complete conditions at all four
+transcript lengths show matched self-preference, but the effect is not monotonic
+with conversation length. Longer answers score better conditionally, although
+length moderation reverses direction across the two tasks and does not explain
+away the matched effect. The completed
+identity-revealed Real-POCQi follow-up
+finds slightly weaker matched self-preference with generator names visible
+(-1.391 versus -1.514 positions when blinded; paired change +0.123, 95% CI
++0.059 to +0.188). Overall, self-preference
 is robust but highly judge-dependent, and raw win rates alone can obscure it in
 weaker generators.
 
@@ -77,24 +84,22 @@ extension has been run.
 | Expanded | Qwen-judge extension to the combined condition | 620 × 2 = 1,240 judgments | Complete and incorporated above | Qwen judges preserved the aggregate model order; matched analysis still detects relative self-preference |
 | Expanded | Blinded no-rubric direct ranking | 100 × 8 = 800 judgments | Complete | Closely agrees with combined-condition rankings |
 | Expanded | Real-POCQi specialty analysis | 30 specialties | Complete derived analysis | No significant specialty heterogeneity |
-| Expanded | Identity-revealed Real-POCQi follow-up | 200 × 6 = 1,200 judgments | **In progress: 625/1,200 latest successes** | Preliminary complete-case analysis suggests slightly less, not more, matched self-preference when identities are shown |
+| Expanded | Identity-revealed Real-POCQi follow-up | 200 × 6 = 1,200 judgments | Complete | Generator names modestly reduced rather than increased matched self-preference: revealed-minus-blinded +0.123 positions [95% CI +0.059, +0.188] |
 | Expanded | Six-model MedSP1000 generation | 200 × 6 = 1,200 conversations | Complete | Full six-model matrix available; planned Qwen clinician generation has not been run |
 | Expanded | MedSP1000 combined judging, 2 turns | 200 × 6 = 1,200 judgments | Complete | Pooled matched self-preference −0.518 positions |
 | Expanded | MedSP1000 combined judging, 4 turns | 200 × 6 = 1,200 judgments | Complete | Pooled matched self-preference −0.457 positions |
 | Expanded | MedSP1000 combined judging, 6 turns | 200 × 6 = 1,200 judgments | Complete | Pooled matched self-preference −0.502 positions |
-| Expanded | MedSP1000 combined judging, 8 turns | 200 × 6 = 1,200 judgments | Complete | Pooled matched self-preference −0.613 positions |
-| Expanded | MedSP1000 direct-ranking and rubric-sum-only conditions | Production target not run | Pilot only | Too little data for scientific conclusions |
+| Expanded | MedSP1000 combined judging, 8 turns | 200 × 6 = 1,200 judgments | Complete; early same-condition batches are incorporated | Pooled matched self-preference −0.613 positions |
 
 Infrastructure smoke runs, retries, cleanup passes, and the deprecated
 MedSP1000 v1 smoke are documented in the artifacts but are not treated as
 separate scientific experiments. The v1 smoke was retired because its patient
 invented unsupported details and its clinician departed from the assigned task.
 
-Excluding pilots and derived subanalyses, the expanded phase has 10,560
+Excluding standalone pilot conditions and derived subanalyses, the expanded phase has 11,760
 completed production judgments: 4,960 combined Real-POCQi judgments, 800 direct
-Real-POCQi judgments, and 4,800 MedSP1000 judgments across four lengths. The 625
-identity-revealed successes are additional provisional observations and are not
-included in that completed total.
+Real-POCQi judgments, 1,200 identity-revealed Real-POCQi judgments, and 4,800
+MedSP1000 judgments across four lengths.
 
 ## 3. Data and model cohorts
 
@@ -133,7 +138,7 @@ expanded cohort has two models from each of four families:
 | Qwen | `Qwen/Qwen3.5-122B-A10B-FP8` | `Qwen/Qwen3.8-27B-FP8` |
 
 All eight models generated responses and judged the complete blinded condition.
-The identity-revealed follow-up currently uses the six API judges and retains
+The completed identity-revealed follow-up uses the six API judges and retains
 all eight generators.
 
 ### 3.3 Expanded MedSP1000 cohort
@@ -182,6 +187,33 @@ adjusted using a pooled additive model with judge-by-generator fixed effects.
 Uncertainty intervals are descriptive 95% normal-approximation intervals over
 questions. The expanded analyses remain exploratory rather than preregistered
 confirmatory tests.
+
+### 4.3 Draft-compatible score-level and decision-level measures
+
+To connect the expanded experiments directly to the first draft, we also
+compute its two original measures from the complete listwise judgments. Let
+`s_kqj` be judge `k`'s mean five-axis score for model `j`'s answer to question
+`q`. The generalized score-level measure is:
+
+```text
+SP-Bias_jq = s_jqj - mean(s_kqj for every outside judge k).
+```
+
+Positive values indicate own-judge score inflation and negative values indicate
+self-criticism. Directional model-vs-model results use one outside judge at a
+time and exactly reproduce the first draft's estimand. Means, paired t
+intervals, and paired one-sample t-tests are calculated across questions.
+
+The strict full-list rankings contain no ties. We convert them into all
+head-to-head decisions involving the judge's own answer. The model-level
+own-pick rate is the fraction of competitors placed below the own answer,
+aggregated across questions. Pairwise rows use the first draft's two-sided
+binomial test against 50%; pooled model-level binomial results are descriptive
+because comparisons against different competitors within a question are
+correlated. These raw-score and own-pick measures are reported as
+draft-compatible secondary analyses. They do not replace the position-adjusted
+matched-rank primary analysis, and raw SP-Bias should be interpreted cautiously
+because judges use the absolute rubric scale differently.
 
 ## 5. Legacy four-model experiments
 
@@ -375,6 +407,27 @@ analysis changes the interpretation of the Qwen judges. They rarely rank their
 answers first because their answers are weak overall, but each still moves its
 own answer upward relative to how the other judges rank the same answer.
 
+The draft-compatible measures make this distinction explicit:
+
+| Model/judge | Raw SP-Bias (95% CI), 0–5 points | Own-pick rate |
+|---|---:|---:|
+| `Qwen/Qwen3.5-122B-A10B-FP8` | +0.642 [+0.596, +0.688] | 30.2% |
+| `Qwen/Qwen3.8-27B-FP8` | +0.002 [−0.047, +0.052] | 18.8% |
+| `claude-opus-5` | +0.016 [+0.003, +0.028] | 99.4% |
+| `claude-sonnet-5` | −0.091 [−0.116, −0.067] | 59.8% |
+| `gemini-3.1-pro-preview` | +0.553 [+0.519, +0.587] | 56.8% |
+| `gemini-3.7-flash` | +0.668 [+0.647, +0.689] | 73.7% |
+| `gpt-5.6-sol` | +0.321 [+0.297, +0.345] | 89.5% |
+| `gpt-5.6-terra` | −0.749 [−0.785, −0.712] | 93.7% |
+
+For example, Terra is strongly self-critical on the raw absolute score scale
+but ranks its own answer above 93.7% of competitors. Opus has almost no raw
+score inflation while choosing its own, genuinely high-performing answer in
+99.4% of derived head-to-head decisions. Qwen 122B shows strong raw score
+inflation but only a 30.2% own-pick rate because its answers rank poorly in
+absolute terms. This is why neither raw SP-Bias nor own-pick rate should be used
+alone as the primary self-preference measure.
+
 ### 7.3 Qwen-judge extension — complete
 
 The two Qwen judges contributed 1,240 completed judgments to the combined
@@ -410,36 +463,35 @@ removing the rubric changes fine ordering but not the dominant performance
 pattern. Matched self-preference also remains strong in the direct condition;
 seven judge estimates are negative, while the Qwen 27B interval includes zero.
 
-### 7.5 Identity-revealed ranking — **in progress**
+### 7.5 Identity-revealed ranking — complete
 
-The planned experiment reveals generator names for the same eight responses on
-a seed-42 sample of 200 questions, using the six API judges. At the cutoff, the
-append-only file has 625 latest successful logical judgments spanning 105
-questions; 101 questions have all six judges. The target is 1,200. Early failed
-attempts are dominated by connection errors and must not be counted as final
-observations.
+The experiment reveals generator names for the same eight responses on a
+seed-42 sample of 200 questions, using the six API judges. The final append-only
+artifact contains all 1,200 planned logical judgments. The comparison below
+restricts the blinded condition to the identical 200 questions and six judges,
+then fits presentation-position effects separately in each condition.
 
-On the 101 complete questions, matched and position-adjusted self-preference is
-−1.374 positions in the revealed condition versus −1.525 for the same six
-judges and questions in the blinded condition. The paired change is +0.152
-positions (95% CI +0.073 to +0.230), meaning that self-preference is slightly
-weaker when names are shown in this interim sample.
+Matched and position-adjusted self-preference is −1.391 positions in the
+revealed condition versus −1.514 for the same question-judge cells when
+blinded. The paired revealed-minus-blinded change is +0.123 positions (95% CI
++0.059 to +0.188; nominal `p=0.00019`), meaning that self-preference is modestly
+weaker when names are shown.
 
 | Judge | Revealed effect | Matched blinded effect | Revealed minus blinded |
 |---|---:|---:|---:|
-| `claude-opus-5` | −1.144 | −1.219 | +0.076 |
-| `claude-sonnet-5` | −0.696 | −0.700 | +0.004 |
-| `gemini-3.1-pro-preview` | −0.563 | −1.104 | +0.541 |
-| `gemini-3.7-flash` | −1.256 | −1.335 | +0.079 |
-| `gpt-5.6-sol` | −2.687 | −2.756 | +0.069 |
-| `gpt-5.6-terra` | −1.897 | −2.039 | +0.142 |
+| `claude-opus-5` | −1.153 | −1.256 | +0.104 |
+| `claude-sonnet-5` | −0.795 | −0.832 | +0.038 |
+| `gemini-3.1-pro-preview` | −0.449 | −0.749 | +0.300 |
+| `gemini-3.7-flash` | −1.177 | −1.315 | +0.138 |
+| `gpt-5.6-sol` | −2.742 | −2.826 | +0.083 |
+| `gpt-5.6-terra` | −2.028 | −2.105 | +0.077 |
+| **Pooled within question** | **−1.391** | **−1.514** | **+0.123** |
 
-**These are in-progress results.** The completed subset may not be random with
-respect to provider failures, the experiment is only about halfway complete,
-and no multiplicity correction has been applied. The final paired analysis
-must be rerun after all 1,200 judgments are present. The interim evidence does
-not support the hypothesis that explicit model names necessarily increase
-self-preference.
+Every revealed-condition effect remains negative and its 95% interval excludes
+zero. After Holm correction across the six judge-specific changes, the
+reductions for Claude Opus (`+0.104`) and Gemini Pro (`+0.300`) remain below
+0.05; the changes for the other four judges do not. Explicit labels therefore
+modestly reduce the pooled effect but do not eliminate same-model affinity.
 
 ## 8. Expanded MedSP1000 multi-turn experiments
 
@@ -460,7 +512,8 @@ verbosity confound.
 
 The same six completed trajectories per question are truncated to 2, 4, or 6
 visible turns or shown in full at 8 turns. All four judging matrices are
-complete.
+complete. Early batches of the same combined condition are retained in the
+8-turn artifact as part of the completed run.
 
 | Visible turns | Latest successes | Complete six-judge questions | Status | Pooled self-preference (95% CI) |
 |---:|---:|---:|---|---:|
@@ -469,10 +522,10 @@ complete.
 | 6 | 1,200/1,200 | 200/200 | Complete | −0.502 [−0.574, −0.430] |
 | 8 | 1,200/1,200 | 200/200 | Complete | −0.613 [−0.683, −0.543] |
 
-Across all 200 questions complete at every length, the corresponding effects
-are −0.518, −0.457, −0.502, and −0.613. The paired 8-minus-2 change is −0.094
-positions (95% CI −0.187 to −0.002). This suggests a modestly larger effect at
-eight turns, but the sequence is not monotonic.
+The corresponding effects are −0.518, −0.457, −0.502, and −0.613. The
+four-length paired analysis uses all 200 questions; the 8-minus-2 change is
+−0.094 positions (95% CI −0.187 to −0.002). The sequence is
+not monotonic.
 
 Judge-specific effects also vary:
 
@@ -484,6 +537,24 @@ Judge-specific effects also vary:
 | `gemini-3.7-flash` | −0.572 | −0.600 | −0.428 | −0.645 |
 | `gpt-5.6-sol` | −0.536 | −0.487 | −0.539 | −0.938 |
 | `gpt-5.6-terra` | −0.826 | −0.508 | −0.637 | −0.632 |
+
+Draft-compatible raw SP-Bias and own-pick rates also disagree across models and
+lengths. Each cell below is `SP-Bias / own-pick rate`:
+
+| Model/judge | 2 turns | 4 turns | 6 turns | 8 turns |
+|---|---:|---:|---:|---:|
+| `claude-opus-5` | −0.517 / 54.1% | −0.267 / 56.8% | −0.159 / 67.6% | −0.086 / 85.5% |
+| `claude-sonnet-5` | −0.313 / 53.8% | −0.020 / 76.8% | +0.036 / 82.6% | −0.015 / 77.4% |
+| `gemini-3.1-pro-preview` | +0.831 / 64.1% | +0.624 / 47.5% | +0.468 / 39.0% | +0.321 / 33.0% |
+| `gemini-3.7-flash` | +0.842 / 51.4% | +0.711 / 49.5% | +0.705 / 43.7% | +0.764 / 44.9% |
+| `gpt-5.6-sol` | +0.244 / 67.2% | +0.113 / 62.6% | +0.156 / 63.6% | +0.278 / 72.0% |
+| `gpt-5.6-terra` | −0.322 / 61.1% | −0.257 / 52.5% | −0.094 / 53.8% | +0.110 / 48.7% |
+
+The Gemini judges illustrate the quality confound in the decision measure:
+they often inflate scores for their own conversations while own-pick rates fall
+as their generators lose relative rank at longer lengths. Conversely, Opus's
+own-pick rate rises as its full conversations become stronger even though its
+raw SP-Bias approaches zero.
 
 The strongest single effect is Sol at eight turns. Opus and Sonnet generally
 become more self-favorable as more conversation is visible, whereas Gemini Pro
@@ -508,13 +579,30 @@ both Gemini models lose relative rank. This could reflect better longitudinal
 history-taking by Anthropic models, verbosity, adaptation across turns, or
 rubric sensitivity; it is not itself evidence of self-preference.
 
-### 8.3 Alternate MedSP1000 judging conditions — pilot only
+### 8.3 Token-length sensitivity
 
-`direct_ranking.jsonl` has nine physical rows and
-`rubric_sum_ranking.jsonl` has eight, originating from the early judging pilot.
-They do not cover the production cohort and should not be compared with the
-completed combined condition. Production no-rubric and rubric-sum-only
-MedSP1000 conditions remain unrun.
+We measured the exact candidate text with a common lexical tokenizer rather
+than comparing provider usage tokens across incompatible tokenizers. For
+MedSP1000, the primary length is the clinician text within each visible prefix.
+A fixed-effects regression controlling the question–judge candidate list,
+generator model, and presentation position finds that a doubling of length is
+associated with a 1.314-position better Real-POCQi rank (95% CI 1.202 to 1.426)
+and 1.351, 2.084, 2.353, and 2.279-position better MedSP1000 ranks at 2, 4, 6,
+and 8 turns. Normalized rubric scores show the corresponding positive
+associations. These are observational associations: clinical completeness and
+quality may cause both length and score, so the coefficients should not be
+interpreted as a causal verbosity bonus.
+
+The primary self-preference estimand already holds the exact answer—and hence
+its length—fixed between the own judge and outside judges. Length therefore
+cannot be an omitted answer-level confounder of that matched contrast. It does
+moderate the effect: per length doubling, the matched rank effect changes by
++0.538 positions in Real-POCQi (weaker self-preference) but by −0.259, −0.306,
+−0.334, and −0.274 positions across the four MedSP1000 prefixes (stronger
+self-preference). Provider-token sensitivity analyses preserve the directions.
+Thus token length is important for absolute model scoring and heterogeneous
+self-preference, but it does not provide a common explanation for the matched
+self-preference observed in both tasks.
 
 ## 9. Cross-experiment synthesis
 
@@ -532,13 +620,15 @@ Several conclusions are supported across the current artifacts:
    its answers.
 4. **Rubric removal does not remove the main pattern.** Direct and combined
    Real-POCQi rankings agree on 91.5% of candidate pairs.
-5. **Longer interaction effects are real but not universal.** Eight-turn
+5. **Length matters for scoring but does not explain away matched preference.**
+   Longer answers score better conditionally, yet the matched design holds the
+   exact answer fixed and length moderation has opposite signs across tasks.
+6. **Longer interaction effects are real but not universal.** Eight-turn
    MedSP1000 self-preference is larger than at two turns, but the 2→4→6→8 trend
    is not monotonic and varies by judge.
-6. **Identity visibility is not yet shown to amplify preference.** The
-   in-progress revealed experiment currently points in the opposite direction,
-   but completion is required.
-7. **Model-family affinity is plausible.** In Real-POCQi, the pooled same-family
+7. **Identity visibility does not amplify preference.** The completed revealed
+   experiment instead shows a modest reduction.
+8. **Model-family affinity is plausible.** In Real-POCQi, the pooled same-family
    preference (−1.269 positions) is close to the exact-model effect (−1.219).
    Because identities were hidden in the primary condition, this can arise from
    shared style, reasoning conventions, or evaluation criteria rather than
@@ -555,20 +645,22 @@ Several conclusions are supported across the current artifacts:
   require within-judge normalization or hierarchical judge effects.
 - Candidate position affects rankings. Randomization limits systematic model
   confounding, but position should remain a covariate.
-- Response length differs greatly by model and may mediate rankings.
+- Response length differs greatly by model and is strongly associated with
+  rankings. The current sensitivity is observational and cannot separate a
+  verbosity reward from genuine completeness or answer quality.
 - Specialty strata range from 3 to 55 questions, leaving many subgroup analyses
   underpowered.
-- The identity-revealed estimates are a provisional snapshot from an actively
-  growing append-only file.
+- The identity-revealed comparison contains six API judges rather than the two
+  Qwen judges, so its disclosure effect should not be generalized to every
+  model in the blinded cohort.
 - The current MedSP1000 scientific matrix has six API models, not the planned
   eight-model cohort. Qwen trajectory generation and judging remain future work.
 - Automated judges have not yet been benchmarked against blinded physician
   judgments in these expanded conditions.
 
-The strongest next analysis is a hierarchical rank model with question,
-generator, judge, model family, position, response length, specialty, and
-transcript-length interactions. The identity-revealed run should be completed
-and analyzed only on paired question-judge cells. MedSP1000 should add the two
+The strongest next extension is a hierarchical rank model with question,
+generator, judge, model family, position, response length, specialty, identity
+disclosure, and transcript-length interactions. MedSP1000 should add the two
 Qwen generators and judges before making claims about open-weight models in the
 multi-turn setting.
 
@@ -580,9 +672,11 @@ judge ranks its own answer more favorably than other judges rank that same
 answer, even when the answer rarely wins. The effect is driven much more by the
 judge than by clinical specialty. In six-model MedSP1000 conversations,
 self-preference persists from two through eight turns but does not increase in
-a simple monotonic way. These results favor multi-family judge panels, matched
-estimands, explicit position controls, and separate reporting of scores and
-rankings over reliance on a single LLM judge or raw own-win rate.
+a simple monotonic way. Revealing generator names modestly reduces rather than
+amplifies the matched effect, although same-model affinity remains strong.
+These results favor multi-family judge panels, matched estimands, explicit
+position controls, and separate reporting of scores and rankings over reliance
+on a single LLM judge or raw own-win rate.
 
 ---
 
@@ -685,7 +779,7 @@ and use a hierarchical rank model.
 | Real-POCQi generations | `data/outputs/generations/real_pocqi_generations.jsonl` |
 | Complete blinded combined judgments | `data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl` |
 | Complete direct rankings | `data/real_pcoqi/judgements/direct_ranking.jsonl` |
-| In-progress identity-revealed judgments | `data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl` |
+| Complete identity-revealed judgments | `data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl` |
 | Frozen MedSP1000 questions | `data/question_sets/medsp1000_generation_cases.jsonl` |
 | MedSP1000 trajectories | `data/outputs/medsp1000/generations.jsonl` |
 | Complete 2-turn judgments | `data/outputs/medsp1000/judgements/rubric_and_model_ranking_2_turns.jsonl` |
@@ -697,9 +791,7 @@ and use a hierarchical rank model.
 All production JSONL files are append-only and retain failures, retries, smoke
 records, and superseded successful attempts. Analyses must filter by
 `experiment_id` and `status`, then select the latest successful record for each
-logical key. Physical line counts are not observation counts. “In progress” in
-this document means the intended logical matrix was incomplete at the stated
-cutoff and the artifact was still changing during analysis.
+logical key. Physical line counts are not observation counts.
 
 ## References
 

@@ -2,8 +2,10 @@
 
 ## Summary
 
-This analysis uses only the completed expanded experiments saved in `data/`.
-The legacy pairwise experiments are outside its scope.
+This analysis uses the completed experiment records saved in `data/`. Early
+batches of the same MedSP1000 combined judging condition are retained as part
+of the completed matrix; standalone judging-pilot conditions are excluded. The
+legacy pairwise experiments are outside its scope.
 
 The primary analysis finds consistent matched self-preference in both tasks:
 
@@ -11,18 +13,23 @@ The primary analysis finds consistent matched self-preference in both tasks:
   higher** on average than other judges rank that same answer (95% CI 1.177 to
   1.261 positions higher; 620 questions).
 - In MedSP1000, the corresponding effects are **0.518, 0.457, 0.502, and
-  0.613 positions higher** at 2, 4, 6, and 8 visible turns, respectively (200
-  questions at every length).
+  0.613 positions higher** at 2, 4, 6, and 8 visible turns, respectively. Each
+  length contains the complete 200-question, six-judge matrix.
 - The Real-POCQi effect remains when the rubric is removed: the no-rubric
   direct-ranking estimate is 1.263 positions (95% CI 1.164 to 1.361) on the
   100-question sensitivity sample.
+- Revealing generator identities does **not** amplify the effect. On the final
+  200-question paired sample, matched self-preference is -1.391 positions when
+  names are shown versus -1.514 for the same six judges under blinding. The
+  revealed-minus-blinded change is +0.123 positions (95% CI +0.059 to +0.188),
+  indicating modestly weaker self-preference with names visible.
 - Conversation length matters jointly, but the pattern is **not monotonic**.
   The evidence does not support a simple claim that self-preference steadily
   increases with every additional pair of turns.
 
-These are matched *same-model affinity* effects under blinded generator
-identity. They do not establish that a judge consciously recognizes its own
-answer.
+These are matched *same-model affinity* effects. Their persistence when
+identities are hidden means they do not require explicit name disclosure or
+establish that a judge consciously recognizes its own answer.
 
 ## Data and analysis cohort
 
@@ -34,12 +41,15 @@ logical `(question_id, judge_model)` key, the last success is retained.
 |---|---:|---:|---:|---:|
 | Real-POCQi combined rubric plus ranking | 620 | 8 | 8 | 4,960 |
 | Real-POCQi no-rubric direct ranking | 100 | 8 | 8 | 800 |
-| MedSP1000, each of 2/4/6/8 turns | 200 | 6 | 6 | 1,200 per length |
+| Real-POCQi identity revealed | 200 | 6 | 8 | 1,200 |
+| MedSP1000, 2/4/6 turns | 200 | 6 | 6 | 1,200 per length |
+| MedSP1000, 8 turns | 200 | 6 | 6 | 1,200 |
 
 The source artifacts are:
 
 - `data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl`
 - `data/real_pcoqi/judgements/direct_ranking.jsonl`
+- `data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl`
 - `data/outputs/medsp1000/judgements/rubric_and_model_ranking_2_turns.jsonl`
 - `data/outputs/medsp1000/judgements/rubric_and_model_ranking_4_turns.jsonl`
 - `data/outputs/medsp1000/judgements/rubric_and_model_ranking_6_turns.jsonl`
@@ -146,6 +156,33 @@ On the deterministic 100-question direct-ranking sample:
 Removing the explicit rubric therefore changes fine ordering but does not
 remove the main self-preference pattern.
 
+### Final identity-revealed comparison
+
+The completed identity-revealed condition contains all 1,200 planned logical
+judgments: 200 questions by the six API judges, with all eight candidate
+generators shown by name. For a fair paired comparison, the blinded condition
+is restricted to the identical 1,200 question-judge cells and the same six
+outside-judge panel. Position effects are fitted separately in each condition.
+
+| Judge | Revealed effect | Matched blinded effect | Revealed minus blinded |
+|---|---:|---:|---:|
+| Claude Opus 5 | -1.153 | -1.256 | +0.104 |
+| Claude Sonnet 5 | -0.795 | -0.832 | +0.038 |
+| Gemini 3.1 Pro | -0.449 | -0.749 | +0.300 |
+| Gemini 3.7 Flash | -1.177 | -1.315 | +0.138 |
+| GPT-5.6 Sol | -2.742 | -2.826 | +0.083 |
+| GPT-5.6 Terra | -2.028 | -2.105 | +0.077 |
+| **Pooled within question** | **-1.391** | **-1.514** | **+0.123** |
+
+The pooled revealed-minus-blinded change is +0.123 positions (95% CI +0.059
+to +0.188, nominal `p=0.00019`). Positive values mean weaker self-preference
+after names are revealed. After Holm correction across judges, the reductions
+for Claude Opus (`+0.104`) and Gemini Pro (`+0.300`) remain below 0.05; the
+other four judge-specific changes do not. Every revealed-condition effect is
+still negative and every 95% interval excludes zero. Thus, explicit identity
+labels modestly reduce the average effect but do not eliminate same-model
+affinity.
+
 ## MedSP1000 results
 
 ### Primary matched rank effects by transcript length
@@ -178,10 +215,11 @@ a marked increase only at eight turns.
 
 ### Repeated-measures length analysis
 
-Because the four conditions are truncations of the same 200 trajectories, they
-must not be analyzed as independent groups. We first average the six correlated
+Because the four conditions are truncations of the same trajectories, they
+must not be analyzed as independent groups. We first average the correlated
 judge effects within each question and then compare the four lengths within
-question.
+question. The four-length joint test uses all 200 questions represented at
+every length.
 
 A three-dimensional Hotelling test of the 4-minus-2, 6-minus-2, and
 8-minus-2 contrasts rejects equality across lengths:
@@ -198,21 +236,60 @@ The individual paired contrasts are:
 | 6 minus 2 turns | +0.016 | [-0.077, +0.110] | 0.729 |
 | 8 minus 2 turns | -0.094 | [-0.187, -0.002] | 0.045 |
 
-Negative changes mean stronger self-preference at the later length. Although
-the 8-minus-2 contrast is nominally below 0.05, it does not survive Holm
-correction across these three baseline contrasts. The adjacent 8-minus-6 change
-is -0.111 positions (95% CI [-0.189, -0.033], nominal (p=0.0054)). Overall,
+Negative changes mean stronger self-preference at the later length. The
+8-minus-2 interval narrowly excludes zero. The adjacent 8-minus-6 change is
+-0.111 positions (95% CI [-0.189, -0.033], nominal (p=0.0054)). Overall,
 the defensible conclusion is that self-preference varies with visible length
 and is strongest at eight turns in the pooled data—not that it rises
 monotonically from two through eight turns.
+
+## Token-length confounding analysis
+
+Candidate length is measured with a provider-neutral lexical tokenizer applied
+to the exact text shown to judges. For MedSP1000, the primary measure counts
+only clinician turns within each judged prefix. Provider-reported output-token
+counts are a sensitivity check because providers use different tokenizers.
+
+For model scoring, a fixed-effects regression absorbs the question–judge list,
+generator model, and presentation position. Coefficients below are changes per
+doubling of response length; lower rank and higher normalized rubric score both
+mean a better evaluation.
+
+| Condition | Rank change | Normalized-rubric change | Matched rank-effect moderation |
+|---|---:|---:|---:|
+| Real-POCQi | −1.314 [−1.426, −1.202] | +0.585 [+0.534, +0.636] | +0.538 [+0.451, +0.625] |
+| MedSP1000, 2 turns | −1.351 [−1.557, −1.144] | +0.744 [+0.615, +0.873] | −0.259 [−0.371, −0.146] |
+| MedSP1000, 4 turns | −2.084 [−2.385, −1.784] | +1.184 [+0.998, +1.369] | −0.306 [−0.421, −0.192] |
+| MedSP1000, 6 turns | −2.353 [−2.662, −2.043] | +1.320 [+1.136, +1.504] | −0.334 [−0.453, −0.215] |
+| MedSP1000, 8 turns | −2.279 [−2.608, −1.950] | +1.381 [+1.176, +1.586] | −0.274 [−0.427, −0.120] |
+
+Longer answers are consistently associated with better model scores even
+within generator model, question–judge list, and presentation position. This
+association is not necessarily a judging bias: completeness, clinical detail,
+and answer quality can cause both greater length and better scores. A
+descriptive common-length standardization materially changes some model means;
+for example, the Real-POCQi mean ranks of Opus and Sol change from 1.887 and
+4.301 to 2.764 and 3.001, while the MedSP1000 eight-turn means change from
+2.097 and 3.180 to 2.656 and 2.299. Thus absolute model comparisons are
+length-sensitive and should report a length sensitivity analysis.
+
+Length is not an omitted answer-level confounder for the primary matched
+self-preference contrast because every own-versus-outside comparison holds the
+exact answer fixed. It can still moderate the effect. The sign reverses across
+tasks: unusually long Real-POCQi answers show weaker matched self-preference,
+whereas unusually long MedSP1000 clinician trajectories show stronger matched
+self-preference. Provider-token sensitivity analyses preserve these directions.
+This task reversal argues against response length as a single explanation for
+the observed self-preference, while confirming that it matters for model
+scoring and effect heterogeneity.
 
 ## Interpretation
 
 The new experiments provide strong evidence of relative exact-model affinity:
 when the answer is held fixed, its own model ranks it more favorably than the
 other models do. This conclusion is robust to presentation-position adjustment,
-within-judge score calibration, removal of the explicit rubric, and two
-different medical evaluation settings.
+within-judge score calibration, removal of the explicit rubric, response-length
+analysis, identity disclosure, and two different medical evaluation settings.
 
 The result should not be described as raw score inflation or as a model merely
 choosing a genuinely better answer. Those interpretations are addressed by
@@ -234,9 +311,13 @@ evidence, or family-specific quality criteria.
   intervals remain large-sample approximations.
 - Exact-model and broader family affinity are difficult to separate completely,
   particularly for the two-model OpenAI, Anthropic, Google, and Qwen families.
-- Response length and stylistic differences may mediate the effect. They should
-  be treated as possible mechanisms, not automatically "controlled away" if
-  the scientific target is total same-model affinity.
+- Response length is strongly associated with model scoring and moderates the
+  matched effect, but observational adjustment cannot separate a verbosity
+  reward from genuine completeness or answer quality. It should be treated as
+  a possible mechanism, not automatically "controlled away" if the scientific
+  target is total same-model affinity.
+- The identity comparison includes six API judges rather than the two Qwen
+  judges, because the revealed condition did not run Qwen as judges.
 - The analysis is exploratory and was not preregistered. P-values should not be
   presented as confirmatory evidence independent of the effect sizes and
   sensitivity checks.
@@ -247,6 +328,9 @@ evidence, or family-specific quality criteria.
 > ranked answers from their own exact model more favorably than other judges
 > ranked the same answers. The effect persisted after presentation-position
 > adjustment and in calibration-aware and no-rubric sensitivity analyses, but
-> varied substantially by judge. In multi-turn conversations it was present at
-> every tested length and strongest at eight turns in pooled analysis, without
-> a monotonic increase from two to eight turns.
+> varied substantially by judge. Revealing generator names modestly reduced
+> rather than increased the matched effect. Response length strongly predicted
+> absolute model scores but did not provide a common explanation for matched
+> self-preference. In multi-turn conversations the effect was present at every
+> tested length and strongest at eight turns in pooled analysis, without a
+> monotonic increase from two to eight turns.
