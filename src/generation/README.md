@@ -45,9 +45,11 @@ turn-level model, token, latency, and finish metadata.
 Both question and output rows are validated against their committed JSON
 Schemas. Output loading additionally verifies turn ordering, transcript
 derivation, and token/latency aggregates before resume state is accepted.
-The 1,024-token clinician generation budget leaves room for frontier-model
-reasoning; the prompt itself asks for concise natural messages without imposing
-a response-length scoring target.
+API clinicians use an explicitly pinned medium reasoning effort. The
+4,096-token clinician generation budget leaves room for hidden reasoning; the
+prompt itself asks for concise natural messages without imposing a
+response-length scoring target. Qwen reasoning remains disabled until a
+comparable open-weight reasoning condition is selected for that cohort.
 
 ## Real-POCQi single-turn generation
 

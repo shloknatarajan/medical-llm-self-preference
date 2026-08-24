@@ -53,9 +53,48 @@ MINUTES = 60
 SEED = 20260824
 PROJECT_ROOT = project_root(Path(__file__))
 QWEN_27B_CLINICIAN_MODEL = "Qwen/Qwen3.8-27B-FP8"
+API_REASONING_EFFORT = "medium"
 TRUNCATED_FINISH_REASONS = frozenset(
     {"incomplete", "length", "max_tokens", "max_output_tokens"}
 )
+
+
+def _clinician_reasoning(model: str) -> dict[str, Any]:
+    provider = resolve_provider(model)[0]
+    if provider is Provider.OPENAI:
+        return {
+            "enabled": True,
+            "mode": "reasoning",
+            "effort": API_REASONING_EFFORT,
+            "provider_options": {
+                "reasoning": {"effort": API_REASONING_EFFORT}
+            },
+        }
+    if provider is Provider.ANTHROPIC:
+        return {
+            "enabled": True,
+            "mode": "adaptive",
+            "effort": API_REASONING_EFFORT,
+            "provider_options": {
+                "thinking": {"type": "adaptive"},
+                "output_config": {"effort": API_REASONING_EFFORT},
+            },
+        }
+    if provider is Provider.GEMINI:
+        return {
+            "enabled": True,
+            "mode": "thinking_level",
+            "effort": API_REASONING_EFFORT,
+            "provider_options": {
+                "thinking_config": {"thinking_level": API_REASONING_EFFORT}
+            },
+        }
+    return {
+        "enabled": False,
+        "mode": "disabled",
+        "effort": None,
+        "provider_options": {},
+    }
 
 app = modal.App(APP_NAME)
 vllm_image = (
@@ -149,7 +188,12 @@ def _call_api_clinician(
     max_tokens: int,
 ) -> tuple[ModelResponse[Any], int]:
     started = time.perf_counter()
-    response = call_model(model, messages, max_output_tokens=max_tokens)
+    response = call_model(
+        model,
+        messages,
+        max_output_tokens=max_tokens,
+        **_clinician_reasoning(model)["provider_options"],
+    )
     return response, round((time.perf_counter() - started) * 1000)
 
 
@@ -224,6 +268,7 @@ def _write_manifest(
     if run_status not in {"running", "completed", "interrupted"}:
         raise ValueError(f"unsupported run status: {run_status}")
     checkpointed_at = utc_now()
+    clinician_reasoning = _clinician_reasoning(clinician_model)
     manifest = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "experiment_id": EXPERIMENT_ID,
@@ -266,7 +311,15 @@ def _write_manifest(
         "patient_max_output_tokens": patient_max_tokens,
         "clinician_max_output_tokens": clinician_max_tokens,
         "seed": SEED,
-        "reasoning_enabled": False,
+        "reasoning_enabled": clinician_reasoning["enabled"],
+        "reasoning": {
+            "patient": {"enabled": False, "mode": "disabled", "effort": None},
+            "clinician": {
+                "enabled": clinician_reasoning["enabled"],
+                "mode": clinician_reasoning["mode"],
+                "effort": clinician_reasoning["effort"],
+            },
+        },
         "patient_inference_engine": "vllm==0.27.1 on Modal",
         "clinician_inference_engine": (
             "vllm==0.27.1 on Modal"
@@ -322,6 +375,7 @@ def _generate_conversation_batch(
     batch_number: int,
     batch_count: int,
 ) -> list[dict[str, Any]]:
+    clinician_reasoning = _clinician_reasoning(clinician_model)
     clinician_histories = [
         clinician_messages(question, exchanges) for question in questions
     ]
@@ -417,6 +471,9 @@ def _generate_conversation_batch(
                 clinician_max_tokens=clinician_max_tokens,
                 clinician_model=clinician_model,
                 clinician_temperature=clinician_temperature,
+                clinician_reasoning_enabled=clinician_reasoning["enabled"],
+                clinician_reasoning_mode=clinician_reasoning["mode"],
+                clinician_reasoning_effort=clinician_reasoning["effort"],
                 status="failed",
                 seed=SEED,
                 error=exc,
@@ -435,6 +492,9 @@ def _generate_conversation_batch(
             clinician_max_tokens=clinician_max_tokens,
             clinician_model=clinician_model,
             clinician_temperature=clinician_temperature,
+            clinician_reasoning_enabled=clinician_reasoning["enabled"],
+            clinician_reasoning_mode=clinician_reasoning["mode"],
+            clinician_reasoning_effort=clinician_reasoning["effort"],
             status="succeeded",
             seed=SEED,
         )
@@ -580,6 +640,7 @@ def main(
     _load_dotenv()
     clinician_provider = resolve_provider(clinician_model)[0]
     clinician_temperature = 0.2 if clinician_provider is Provider.MODAL else None
+    clinician_reasoning = _clinician_reasoning(clinician_model)
     questions = load_questions(Path(input_path))
     if smoke_test:
         num_questions = 1
@@ -600,6 +661,8 @@ def main(
             patient_max_tokens=patient_max_tokens,
             clinician_max_tokens=clinician_max_tokens,
             clinician_temperature=clinician_temperature,
+            clinician_reasoning_mode=clinician_reasoning["mode"],
+            clinician_reasoning_effort=clinician_reasoning["effort"],
             seed=SEED,
         )
         for question in questions[:num_questions]

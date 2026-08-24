@@ -100,7 +100,12 @@
     "patient_max_output_tokens": { "type": "integer", "minimum": 1 },
     "clinician_max_output_tokens": { "type": "integer", "minimum": 1 },
     "seed": { "type": ["integer", "null"] },
-    "reasoning_enabled": { "const": false },
+    "reasoning_enabled": { "type": "boolean" },
+    "clinician_reasoning_mode": { "$ref": "#/$defs/nonEmptyString" },
+    "clinician_reasoning_effort": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
     "environment_controller_used": { "const": false },
     "evaluator_used": { "const": false },
     "grading_or_judging_performed": { "const": false },

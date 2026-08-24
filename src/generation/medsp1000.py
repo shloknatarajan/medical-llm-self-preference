@@ -37,7 +37,7 @@ OUTPUT_SCHEMA = PROJECT_ROOT / (
 PATIENT_MODEL = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
 DEFAULT_CLINICIAN_MODEL = "Qwen/Qwen3.5-122B-A10B-FP8"
 DEFAULT_EXCHANGES = 4
-DEFAULT_CLINICIAN_MAX_TOKENS = 1024
+DEFAULT_CLINICIAN_MAX_TOKENS = 4096
 EXPERIMENT_ID = "medsp1000-multiturn-generation-v1"
 PROMPT_VERSION = "medsp1000-multiturn-v2"
 OUTPUT_SCHEMA_VERSION = "1.0"
@@ -220,6 +220,8 @@ def build_generation_key(
     patient_max_tokens: int = 160,
     clinician_max_tokens: int = DEFAULT_CLINICIAN_MAX_TOKENS,
     clinician_temperature: float | None = 0.2,
+    clinician_reasoning_mode: str = "disabled",
+    clinician_reasoning_effort: str | None = None,
     seed: int = 20260824,
 ) -> str:
     parts = [
@@ -246,6 +248,8 @@ def build_generation_key(
             f"patient-max-{patient_max_tokens}",
             f"clinician-max-{clinician_max_tokens}",
             f"clinician-temp-{clinician_temperature}",
+            f"clinician-reasoning-{clinician_reasoning_mode}",
+            f"clinician-effort-{clinician_reasoning_effort}",
             f"seed-{seed}",
         )
     )
@@ -263,6 +267,9 @@ def generation_record(
     clinician_max_tokens: int,
     clinician_model: str = DEFAULT_CLINICIAN_MODEL,
     clinician_temperature: float | None = 0.2,
+    clinician_reasoning_enabled: bool = False,
+    clinician_reasoning_mode: str = "disabled",
+    clinician_reasoning_effort: str | None = None,
     status: str,
     seed: int,
     error: Exception | None = None,
@@ -308,6 +315,8 @@ def generation_record(
             patient_max_tokens=patient_max_tokens,
             clinician_max_tokens=clinician_max_tokens,
             clinician_temperature=clinician_temperature,
+            clinician_reasoning_mode=clinician_reasoning_mode,
+            clinician_reasoning_effort=clinician_reasoning_effort,
             seed=seed,
         ),
         "generation_id": f"gen-{uuid.uuid4()}",
@@ -356,7 +365,9 @@ def generation_record(
         "patient_max_output_tokens": patient_max_tokens,
         "clinician_max_output_tokens": clinician_max_tokens,
         "seed": seed,
-        "reasoning_enabled": False,
+        "reasoning_enabled": clinician_reasoning_enabled,
+        "clinician_reasoning_mode": clinician_reasoning_mode,
+        "clinician_reasoning_effort": clinician_reasoning_effort,
         "environment_controller_used": False,
         "evaluator_used": False,
         "grading_or_judging_performed": False,

@@ -143,6 +143,11 @@ def test_generation_key_changes_with_prompt_or_run_configuration() -> None:
     assert default_key != build_generation_key(
         "question-1", clinician_temperature=None
     )
+    assert default_key != build_generation_key(
+        "question-1",
+        clinician_reasoning_mode="reasoning",
+        clinician_reasoning_effort="medium",
+    )
     first_inputs = build_generation_key(
         "question-1",
         question_text_sha256="a" * 64,
@@ -197,9 +202,13 @@ def test_append_jsonl_syncs_each_complete_record(
 
 
 def test_api_clinician_batch_normalizes_provider_outputs(monkeypatch) -> None:
-    def fake_call_model(model, messages, *, max_output_tokens):
+    def fake_call_model(model, messages, *, max_output_tokens, **provider_options):
         assert model == "claude-test"
         assert max_output_tokens == 220
+        assert provider_options == {
+            "thinking": {"type": "adaptive"},
+            "output_config": {"effort": "medium"},
+        }
         return ModelResponse(
             text=f"Reply to {messages[-1]['content']}",
             provider=Provider.ANTHROPIC,
@@ -225,6 +234,41 @@ def test_api_clinician_batch_normalizes_provider_outputs(monkeypatch) -> None:
     ]
     assert result["input_tokens"] == [12, 12]
     assert result["output_tokens"] == [5, 5]
+
+
+@pytest.mark.parametrize(
+    ("model", "mode", "provider_options"),
+    [
+        (
+            "gpt-5.6-sol",
+            "reasoning",
+            {"reasoning": {"effort": "medium"}},
+        ),
+        (
+            "claude-opus-5",
+            "adaptive",
+            {
+                "thinking": {"type": "adaptive"},
+                "output_config": {"effort": "medium"},
+            },
+        ),
+        (
+            "gemini-3.1-pro-preview",
+            "thinking_level",
+            {"thinking_config": {"thinking_level": "medium"}},
+        ),
+    ],
+)
+def test_api_reasoning_is_explicitly_medium(
+    model: str, mode: str, provider_options: dict[str, object]
+) -> None:
+    config = modal_medsp1000._clinician_reasoning(model)
+    assert config == {
+        "enabled": True,
+        "mode": mode,
+        "effort": "medium",
+        "provider_options": provider_options,
+    }
 
 
 def test_batch_failure_returns_auditable_failed_attempt(
@@ -257,7 +301,7 @@ def test_batch_failure_returns_auditable_failed_attempt(
     records = modal_medsp1000._generate_conversation_batch(
         questions=[question],
         clinician_remote=None,
-        clinician_model="clinician-model",
+        clinician_model="claude-test",
         clinician_temperature=None,
         patient=patient,
         run_id="run-1",
@@ -391,7 +435,7 @@ def test_multiturn_output_matches_schema_and_aggregates_usage(tmp_path: Path) ->
         )
     )
     medsp1000.validate_record(record, medsp1000.OUTPUT_SCHEMA, location="test record")
-    assert set(record) == set(schema["required"])
+    assert set(record) == set(schema["properties"])
     assert record["turns"] == turns
     assert record["transcript_text"] == "CLINICIAN: Hello\nPATIENT: My neck hurts."
     assert record["input_tokens"] == 300
