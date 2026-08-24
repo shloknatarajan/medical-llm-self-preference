@@ -52,6 +52,10 @@ MANIFEST
 .coverage_cache/
 site/
 docs/_build/
+output/pdf/*.aux
+output/pdf/*.log
+output/pdf/*.out
+tmp/
 
 # Type-checker and profiler output
 dmypy.json

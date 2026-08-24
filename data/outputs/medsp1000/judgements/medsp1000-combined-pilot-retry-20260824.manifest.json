@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "medsp1000_all_judges_v1",
+  "run_id": "medsp1000-combined-pilot-retry-20260824",
+  "created_at": "2026-08-24T16:40:47.911173Z",
+  "input_generations": "data/outputs/medsp1000/generations.jsonl",
+  "input_questions": "data/question_sets/medsp1000_generation_cases.jsonl",
+  "output_dir": "data/outputs/medsp1000/judgements",
+  "question_count": 5,
+  "question_ids": [
+    "mededportal_9907__scenario1",
+    "mededportal_9907__scenario6",
+    "mep_2374-8265.11163-s001__scenario1",
+    "mededportal_9907__scenario2",
+    "mep_2374-8265.11500-s001__scenario4"
+  ],
+  "generator_models": [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "gemini-3.1-pro-preview",
+    "gemini-3.7-flash"
+  ],
+  "judge_models": [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "gemini-3.1-pro-preview",
+    "gemini-3.7-flash"
+  ],
+  "judging_cases": [
+    "rubric_and_model_ranking"
+  ],
+  "exchange_count": 4,
+  "reasoning_effort": "medium",
+  "presentation_seed": 42,
+  "temperature": null,
+  "max_output_tokens": 8192,
+  "retries": 2,
+  "retry_delay_seconds": 2.0,
+  "force": false,
+  "provider_concurrency": {
+    "openai": 1,
+    "anthropic": 1,
+    "gemini": 1
+  },
+  "logical_judgments": {
+    "total": 30,
+    "pending_at_start": 3,
+    "skipped_existing": 27,
+    "succeeded": 3,
+    "failed": 0
+  }
+}

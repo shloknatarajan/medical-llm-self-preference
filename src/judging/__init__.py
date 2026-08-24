@@ -1,11 +1,22 @@
 """Structured outputs and saved records for model-based judging."""
 
+from .judge_medsp1000 import (
+    MEDSP1000_JUDGING_PROFILE,
+    build_medsp1000_judgment_keys,
+    judge_medsp1000_trajectories,
+)
 from .judge_real_pocqi import (
+    IDENTITY_REVEALED_POCQI_JUDGING_PROFILE,
+    POCQI_JUDGING_PROFILE,
+    JudgingCondition,
+    JudgingTaskProfile,
     PocqiJudgingSettings,
     PocqiResumeState,
     PocqiResumeTracker,
     PocqiResponseInput,
+    build_judgment_keys,
     build_pocqi_judgment_keys,
+    judge_ranked_responses,
     judge_pocqi_responses,
     load_pocqi_resume_state,
 )
@@ -33,7 +44,12 @@ __all__ = [
     "DEFAULT_POCQI_JUDGMENTS_DIR",
     "DirectRankingOutput",
     "DirectRankingResult",
+    "JudgingCondition",
+    "JudgingTaskProfile",
+    "IDENTITY_REVEALED_POCQI_JUDGING_PROFILE",
+    "MEDSP1000_JUDGING_PROFILE",
     "POCQI_JUDGMENT_PATHS",
+    "POCQI_JUDGING_PROFILE",
     "PocqiJudgingCase",
     "PocqiJudgingSettings",
     "PocqiResumeState",
@@ -51,7 +67,11 @@ __all__ = [
     "RubricSumRankingResult",
     "ScoredPocqiResponse",
     "append_pocqi_judgment",
+    "build_judgment_keys",
+    "build_medsp1000_judgment_keys",
     "build_pocqi_judgment_keys",
+    "judge_medsp1000_trajectories",
     "judge_pocqi_responses",
+    "judge_ranked_responses",
     "load_pocqi_resume_state",
 ]

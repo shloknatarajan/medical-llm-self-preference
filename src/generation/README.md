@@ -56,6 +56,37 @@ prompt itself asks for concise natural messages without imposing a
 response-length scoring target. Qwen reasoning remains disabled until a
 comparable open-weight reasoning condition is selected for that cohort.
 
+Judge complete MedSP1000 trajectories with the same three blinded conditions
+and five-axis rubric used for Real-POCQi:
+
+```bash
+uv run python -m judging.run_medsp1000_judging --dry-run
+uv run python -m judging.run_medsp1000_judging
+```
+
+The runner treats each full clinician-patient transcript as one candidate,
+scores only clinician behavior, and writes append-only, resumable outputs under
+`data/outputs/medsp1000/judgements/`. Use `--num-questions` for a pilot and
+`--judging-cases` to select a subset of the three conditions.
+
+To judge a prefix of each trajectory instead, pass an even role-turn count no
+greater than the generated trajectory length. Prefix views have distinct
+prompt-template IDs, resume keys, manifests, and JSONLs, so they cannot collide
+with full-trajectory judgments:
+
+```bash
+uv run python -m judging.run_medsp1000_judging \
+  --view-turn-count 2 \
+  --judging-cases rubric_and_model_ranking
+```
+
+For example, the combined condition writes 2-, 4-, and 6-turn views to
+`rubric_and_model_ranking_2_turns.jsonl`,
+`rubric_and_model_ranking_4_turns.jsonl`, and
+`rubric_and_model_ranking_6_turns.jsonl`, respectively. Each judge sees only
+the requested prefix and is explicitly told to evaluate the visible
+interaction.
+
 ## Real-POCQi single-turn generation
 
 The Real-POCQi pipeline deterministically shuffles the committed 620-question
@@ -106,3 +137,36 @@ attempt is intentionally required.
 
 Run `uv run python -m generation.generate_real_pocqi --help` for sampling,
 specialty filtering, concurrency, retry, and output options.
+
+### Identity-revealed judging follow-up
+
+To compare blinded judgments with judgments where each candidate's generator
+name is visible, reuse the existing generation artifact and run the combined
+five-axis scoring plus independent-ranking condition on a seeded 200-question
+subset:
+
+```bash
+uv run python -m judging.run_real_pocqi_judging \
+  --env-file .env_backup \
+  --reveal-generator-identities \
+  --judging-cases rubric_and_model_ranking \
+  --num-questions 200 \
+  --question-sample-seed 42 \
+  --max-output-tokens 8192 \
+  --dry-run
+
+uv run python -m judging.run_real_pocqi_judging \
+  --env-file .env_backup \
+  --reveal-generator-identities \
+  --judging-cases rubric_and_model_ranking \
+  --num-questions 200 \
+  --question-sample-seed 42 \
+  --max-output-tokens 8192
+```
+
+The revealed mode defaults to the same 200-question sample and seed when those
+two flags are omitted. It writes judgments to
+`data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl`,
+leaving the blinded JSONL untouched. The manifest freezes the selected question
+IDs, sample seed, output path, and identity condition. Use those question IDs to
+filter the completed blinded sweep for paired analysis.
