@@ -1,0 +1,23 @@
+# Self-Preference Leaderboard
+
+Open `index.html` directly in a browser or serve this directory with any static
+file server. The page has no build step and no JavaScript dependency.
+
+## Result sources
+
+- `docs/New_Experiments_Self_Preference_Analysis.md` supplies the primary,
+  position-adjusted self-preference results.
+- `docs/Med_Self_Preference_Updated_Experiment_Compendium.md` supplies aggregate
+  Real-POCQi generator performance and experiment counts.
+- `data/analysis/self_preference/` contains the generated model-, pairwise-, and
+  question-level secondary score artifacts.
+
+Charts are inline SVG and can be edited without adding a JavaScript dependency.
+Shared colors, fonts, and dimensions are defined as custom properties at the top
+of `styles.css`.
+
+The page separates overall answer quality, blinded single-turn results, blinded
+multi-turn results, and the paired model-unblinded comparison into independent
+anchor sections.
+
+The Google Fonts import is optional; system font fallbacks are already included.
