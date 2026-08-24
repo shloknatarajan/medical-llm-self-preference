@@ -42,6 +42,11 @@ configuration, and seed at
 `data/outputs/medsp1000/generations.jsonl`; each run writes a separate manifest
 beside it. One JSONL row contains one complete conversation attempt, with
 turn-level model, token, latency, and finish metadata.
+Failures are isolated per conversation within each batch, so a truncated or
+failed response does not discard successful neighbors. API clinician turns also
+record provider request IDs and raw text-block counts and hashes when exposed by
+the SDK. Exact repeated-message artifacts are flagged without rewriting the
+provider's returned text.
 Both question and output rows are validated against their committed JSON
 Schemas. Output loading additionally verifies turn ordering, transcript
 derivation, and token/latency aggregates before resume state is accepted.

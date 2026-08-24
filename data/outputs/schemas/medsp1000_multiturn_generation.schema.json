@@ -167,7 +167,23 @@
         "finish_reason": { "$ref": "#/$defs/nonEmptyString" },
         "input_tokens": { "$ref": "#/$defs/nonNegativeInteger" },
         "output_tokens": { "$ref": "#/$defs/nonNegativeInteger" },
-        "latency_ms": { "$ref": "#/$defs/nonNegativeInteger" }
+        "latency_ms": { "$ref": "#/$defs/nonNegativeInteger" },
+        "provider_request_id": { "$ref": "#/$defs/nonEmptyString" },
+        "provider_output_item_count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "provider_text_block_count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "provider_text_block_sha256": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "quality_flags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonEmptyString" },
+          "uniqueItems": true
+        }
       }
     }
   }

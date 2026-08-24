@@ -146,12 +146,11 @@ def _generate(
     }
 
 
-def _validate_batch(
+def _batch_item_errors(
     result: dict[str, Any], expected_count: int, role: str, exchange: int
-) -> list[str]:
-    texts = result["texts"]
-    finish_reasons = result["finish_reasons"]
+) -> list[Exception | None]:
     metadata_fields = (
+        "texts",
         "input_tokens",
         "output_tokens",
         "finish_reasons",
@@ -162,25 +161,99 @@ def _validate_batch(
         or len(result[field]) != expected_count
         for field in metadata_fields
     ):
-        raise RuntimeError(
-            f"invalid {role} metadata batch at exchange {exchange}"
-        )
-    if len(texts) != expected_count or any(not text for text in texts):
-        raise RuntimeError(f"invalid {role} batch at exchange {exchange}")
-    if len(finish_reasons) != expected_count or any(
-        not reason for reason in finish_reasons
-    ):
-        raise RuntimeError(
-            f"missing {role} finish reason at exchange {exchange}: {finish_reasons}"
-        )
-    if any(
-        str(reason).casefold() in TRUNCATED_FINISH_REASONS
-        for reason in finish_reasons
-    ):
-        raise RuntimeError(
-            f"truncated {role} batch at exchange {exchange}: {finish_reasons}"
-        )
-    return texts
+        error = RuntimeError(f"invalid {role} metadata batch at exchange {exchange}")
+        return [error] * expected_count
+
+    upstream_errors = result.get("errors", [None] * expected_count)
+    if not isinstance(upstream_errors, list) or len(upstream_errors) != expected_count:
+        error = RuntimeError(f"invalid {role} error batch at exchange {exchange}")
+        return [error] * expected_count
+
+    errors: list[Exception | None] = []
+    for index in range(expected_count):
+        if upstream_errors[index] is not None:
+            errors.append(upstream_errors[index])
+            continue
+        text = result["texts"][index]
+        finish_reason = result["finish_reasons"][index]
+        if not isinstance(text, str) or not text.strip():
+            errors.append(
+                RuntimeError(f"invalid {role} response at exchange {exchange}")
+            )
+        elif not finish_reason:
+            errors.append(
+                RuntimeError(f"missing {role} finish reason at exchange {exchange}")
+            )
+        elif str(finish_reason).casefold() in TRUNCATED_FINISH_REASONS:
+            errors.append(
+                RuntimeError(
+                    f"truncated {role} response at exchange {exchange}: "
+                    f"{finish_reason}"
+                )
+            )
+        else:
+            errors.append(None)
+    return errors
+
+
+def _raw_attr(value: Any, name: str, default: Any = None) -> Any:
+    if isinstance(value, dict):
+        return value.get(name, default)
+    return getattr(value, name, default)
+
+
+def _provider_response_diagnostics(response: ModelResponse[Any]) -> dict[str, Any]:
+    raw = response.raw
+    output_items = _raw_attr(raw, "output")
+    text_blocks: list[str] = []
+    output_item_count: int | None = None
+
+    if isinstance(output_items, list):
+        output_item_count = len(output_items)
+        for item in output_items:
+            for block in _raw_attr(item, "content", []) or []:
+                if _raw_attr(block, "type") in {"output_text", "text"}:
+                    text = _raw_attr(block, "text")
+                    if text is not None:
+                        text_blocks.append(str(text))
+    else:
+        content = _raw_attr(raw, "content")
+        if isinstance(content, list):
+            output_item_count = len(content)
+            for block in content:
+                if _raw_attr(block, "type") in {"output_text", "text"}:
+                    text = _raw_attr(block, "text")
+                    if text is not None:
+                        text_blocks.append(str(text))
+        else:
+            candidates = _raw_attr(raw, "candidates")
+            if isinstance(candidates, list):
+                output_item_count = len(candidates)
+                for candidate in candidates:
+                    candidate_content = _raw_attr(candidate, "content")
+                    for part in _raw_attr(candidate_content, "parts", []) or []:
+                        text = _raw_attr(part, "text")
+                        if text is not None:
+                            text_blocks.append(str(text))
+
+    return {
+        "provider_request_id": response.request_id,
+        "provider_output_item_count": output_item_count,
+        "provider_text_block_count": (
+            len(text_blocks) if output_item_count is not None else None
+        ),
+        "provider_text_block_sha256": [_sha256_text(text) for text in text_blocks],
+    }
+
+
+def _quality_flags(text: str) -> list[str]:
+    midpoint = len(text) // 2
+    for split_at in range(max(1, midpoint - 3), min(len(text), midpoint + 4)):
+        left = " ".join(text[:split_at].split())
+        right = " ".join(text[split_at:].split())
+        if left and left == right:
+            return ["exact_repeated_message"]
+    return []
 
 
 def _call_api_clinician(
@@ -203,21 +276,57 @@ def _generate_api_clinician_batch(
     conversations: list[list[dict[str, str]]],
     max_tokens: int,
 ) -> dict[str, Any]:
+    def call_one(
+        messages: list[dict[str, str]],
+    ) -> tuple[ModelResponse[Any] | None, int, Exception | None]:
+        try:
+            response, latency_ms = _call_api_clinician(model, messages, max_tokens)
+            return response, latency_ms, None
+        except Exception as exc:
+            return None, 0, exc
+
     with ThreadPoolExecutor(max_workers=len(conversations)) as executor:
-        results = list(
-            executor.map(
-                lambda messages: _call_api_clinician(model, messages, max_tokens),
-                conversations,
-            )
-        )
+        results = list(executor.map(call_one, conversations))
+
     responses = [result[0] for result in results]
+    diagnostics = [
+        _provider_response_diagnostics(response) if response is not None else {}
+        for response in responses
+    ]
     return {
-        "texts": [response.text.strip() for response in responses],
-        "input_tokens": [response.usage.input_tokens or 0 for response in responses],
-        "output_tokens": [response.usage.output_tokens or 0 for response in responses],
-        "finish_reasons": [response.finish_reason or "unknown" for response in responses],
-        "model_versions": [response.model for response in responses],
+        "texts": [
+            response.text.strip() if response is not None else ""
+            for response in responses
+        ],
+        "input_tokens": [
+            response.usage.input_tokens or 0 if response is not None else 0
+            for response in responses
+        ],
+        "output_tokens": [
+            response.usage.output_tokens or 0 if response is not None else 0
+            for response in responses
+        ],
+        "finish_reasons": [
+            response.finish_reason or "unknown" if response is not None else "error"
+            for response in responses
+        ],
+        "model_versions": [
+            response.model if response is not None else model for response in responses
+        ],
         "latency_ms": [result[1] for result in results],
+        "errors": [result[2] for result in results],
+        "provider_request_ids": [
+            diagnostic.get("provider_request_id") for diagnostic in diagnostics
+        ],
+        "provider_output_item_counts": [
+            diagnostic.get("provider_output_item_count") for diagnostic in diagnostics
+        ],
+        "provider_text_block_counts": [
+            diagnostic.get("provider_text_block_count") for diagnostic in diagnostics
+        ],
+        "provider_text_block_sha256": [
+            diagnostic.get("provider_text_block_sha256", []) for diagnostic in diagnostics
+        ],
     }
 
 
@@ -383,15 +492,22 @@ def _generate_conversation_batch(
     patient_histories = [patient_messages(question) for question in questions]
     turns: list[list[dict[str, Any]]] = [[] for _ in questions]
     prior_patient_replies: list[str | None] = [None] * len(questions)
+    active_indices = list(range(len(questions)))
+    failures: dict[int, Exception] = {}
 
-    try:
-        for exchange in range(1, exchanges + 1):
-            clinician_prompts = [
-                clinician_generation_messages(
-                    history, prior_patient_replies[index], exchange, exchanges
-                )
-                for index, history in enumerate(clinician_histories)
-            ]
+    for exchange in range(1, exchanges + 1):
+        if not active_indices:
+            break
+        clinician_prompts = [
+            clinician_generation_messages(
+                clinician_histories[index],
+                prior_patient_replies[index],
+                exchange,
+                exchanges,
+            )
+            for index in active_indices
+        ]
+        try:
             if clinician_remote is None:
                 clinician_result = _generate_api_clinician_batch(
                     clinician_model, clinician_prompts, clinician_max_tokens
@@ -400,87 +516,114 @@ def _generate_conversation_batch(
                 clinician_result = clinician_remote.generate_batch.remote(
                     clinician_prompts, clinician_max_tokens
                 )
-            clinician_texts = _validate_batch(
-                clinician_result, len(questions), "clinician", exchange
+        except Exception as exc:
+            failures.update({index: exc for index in active_indices})
+            break
+
+        clinician_errors = _batch_item_errors(
+            clinician_result, len(active_indices), "clinician", exchange
+        )
+        patient_prompts: list[list[dict[str, str]]] = []
+        patient_indices: list[int] = []
+        clinician_text_by_index: dict[int, str] = {}
+        for result_index, question_index in enumerate(active_indices):
+            error = clinician_errors[result_index]
+            if error is not None:
+                failures[question_index] = error
+                continue
+            clinician_text = clinician_result["texts"][result_index].strip()
+            clinician_text_by_index[question_index] = clinician_text
+            clinician_histories[question_index] = advance_clinician_history(
+                clinician_histories[question_index],
+                prior_patient_replies[question_index],
+                clinician_text,
             )
+            patient_prompts.append(
+                patient_generation_messages(
+                    patient_histories[question_index], clinician_text
+                )
+            )
+            patient_indices.append(question_index)
+            clinician_turn = {
+                "turn_index": 2 * exchange - 1,
+                "exchange_index": exchange,
+                "role": "clinician",
+                "content": clinician_text,
+                "model": clinician_result.get(
+                    "model_versions", [clinician_model] * len(active_indices)
+                )[result_index],
+                "finish_reason": clinician_result["finish_reasons"][result_index],
+                "input_tokens": int(clinician_result["input_tokens"][result_index]),
+                "output_tokens": int(
+                    clinician_result["output_tokens"][result_index]
+                ),
+                "latency_ms": int(clinician_result["latency_ms"][result_index]),
+            }
+            diagnostic_fields = {
+                "provider_request_id": "provider_request_ids",
+                "provider_output_item_count": "provider_output_item_counts",
+                "provider_text_block_count": "provider_text_block_counts",
+                "provider_text_block_sha256": "provider_text_block_sha256",
+            }
+            for turn_field, result_field in diagnostic_fields.items():
+                values = clinician_result.get(result_field)
+                if isinstance(values, list) and len(values) == len(active_indices):
+                    value = values[result_index]
+                    if value is not None:
+                        clinician_turn[turn_field] = value
+            quality_flags = _quality_flags(clinician_text)
+            if quality_flags:
+                clinician_turn["quality_flags"] = quality_flags
+            turns[question_index].append(clinician_turn)
 
-            patient_prompts: list[list[dict[str, str]]] = []
-            for index, clinician_text in enumerate(clinician_texts):
-                clinician_histories[index] = advance_clinician_history(
-                    clinician_histories[index],
-                    prior_patient_replies[index],
-                    clinician_text,
-                )
-                patient_prompts.append(
-                    patient_generation_messages(patient_histories[index], clinician_text)
-                )
-                turns[index].append(
-                    {
-                        "turn_index": 2 * exchange - 1,
-                        "exchange_index": exchange,
-                        "role": "clinician",
-                        "content": clinician_text,
-                        "model": clinician_result.get(
-                            "model_versions", [clinician_model] * len(questions)
-                        )[index],
-                        "finish_reason": clinician_result["finish_reasons"][index],
-                        "input_tokens": int(clinician_result["input_tokens"][index]),
-                        "output_tokens": int(
-                            clinician_result["output_tokens"][index]
-                        ),
-                        "latency_ms": int(clinician_result["latency_ms"][index]),
-                    }
-                )
-
+        if not patient_indices:
+            active_indices = []
+            continue
+        try:
             patient_result = patient.generate_batch.remote(
                 patient_prompts, patient_max_tokens
             )
-            patient_texts = _validate_batch(
-                patient_result, len(questions), "patient", exchange
+        except Exception as exc:
+            failures.update({index: exc for index in patient_indices})
+            active_indices = []
+            continue
+
+        patient_errors = _batch_item_errors(
+            patient_result, len(patient_indices), "patient", exchange
+        )
+        next_active_indices: list[int] = []
+        for result_index, question_index in enumerate(patient_indices):
+            error = patient_errors[result_index]
+            if error is not None:
+                failures[question_index] = error
+                continue
+            patient_text = patient_result["texts"][result_index].strip()
+            patient_histories[question_index] = advance_patient_history(
+                patient_histories[question_index],
+                clinician_text_by_index[question_index],
+                patient_text,
             )
-            for index, patient_text in enumerate(patient_texts):
-                patient_histories[index] = advance_patient_history(
-                    patient_histories[index], clinician_texts[index], patient_text
-                )
-                prior_patient_replies[index] = patient_text
-                turns[index].append(
-                    {
-                        "turn_index": 2 * exchange,
-                        "exchange_index": exchange,
-                        "role": "patient",
-                        "content": patient_text,
-                        "model": PATIENT_MODEL,
-                        "finish_reason": patient_result["finish_reasons"][index],
-                        "input_tokens": int(patient_result["input_tokens"][index]),
-                        "output_tokens": int(patient_result["output_tokens"][index]),
-                        "latency_ms": int(patient_result["latency_ms"][index]),
-                    }
-                )
-            print(
-                f"Batch {batch_number}/{batch_count}, exchange {exchange}/{exchanges}: "
-                f"generated {len(questions)} clinician and patient turns"
+            prior_patient_replies[question_index] = patient_text
+            turns[question_index].append(
+                {
+                    "turn_index": 2 * exchange,
+                    "exchange_index": exchange,
+                    "role": "patient",
+                    "content": patient_text,
+                    "model": PATIENT_MODEL,
+                    "finish_reason": patient_result["finish_reasons"][result_index],
+                    "input_tokens": int(patient_result["input_tokens"][result_index]),
+                    "output_tokens": int(patient_result["output_tokens"][result_index]),
+                    "latency_ms": int(patient_result["latency_ms"][result_index]),
+                }
             )
-    except Exception as exc:
-        return [
-            generation_record(
-                question=question,
-                turns=turns[index],
-                run_id=run_id,
-                attempt=starting_attempts[question.question_id],
-                exchanges=exchanges,
-                patient_max_tokens=patient_max_tokens,
-                clinician_max_tokens=clinician_max_tokens,
-                clinician_model=clinician_model,
-                clinician_temperature=clinician_temperature,
-                clinician_reasoning_enabled=clinician_reasoning["enabled"],
-                clinician_reasoning_mode=clinician_reasoning["mode"],
-                clinician_reasoning_effort=clinician_reasoning["effort"],
-                status="failed",
-                seed=SEED,
-                error=exc,
-            )
-            for index, question in enumerate(questions)
-        ]
+            next_active_indices.append(question_index)
+        active_indices = next_active_indices
+        print(
+            f"Batch {batch_number}/{batch_count}, exchange {exchange}/{exchanges}: "
+            f"completed {len(active_indices)} conversations; "
+            f"{len(failures)} failed so far"
+        )
 
     return [
         generation_record(
@@ -496,8 +639,9 @@ def _generate_conversation_batch(
             clinician_reasoning_enabled=clinician_reasoning["enabled"],
             clinician_reasoning_mode=clinician_reasoning["mode"],
             clinician_reasoning_effort=clinician_reasoning["effort"],
-            status="succeeded",
+            status="failed" if index in failures else "succeeded",
             seed=SEED,
+            error=failures.get(index),
         )
         for index, question in enumerate(questions)
     ]

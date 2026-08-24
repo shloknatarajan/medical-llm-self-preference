@@ -1,5 +1,6 @@
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -210,12 +211,17 @@ def test_api_clinician_batch_normalizes_provider_outputs(monkeypatch) -> None:
             "thinking": {"type": "adaptive"},
             "output_config": {"effort": "medium"},
         }
+        text = f"Reply to {messages[-1]['content']}"
         return ModelResponse(
-            text=f"Reply to {messages[-1]['content']}",
+            text=text,
             provider=Provider.ANTHROPIC,
             model="claude-test-20260824",
+            request_id=f"request-{messages[-1]['content']}",
             finish_reason="end_turn",
             usage=TokenUsage(input_tokens=12, output_tokens=5),
+            raw=SimpleNamespace(
+                content=[SimpleNamespace(type="text", text=text)]
+            ),
         )
 
     monkeypatch.setattr(modal_medsp1000, "call_model", fake_call_model)
@@ -235,6 +241,79 @@ def test_api_clinician_batch_normalizes_provider_outputs(monkeypatch) -> None:
     ]
     assert result["input_tokens"] == [12, 12]
     assert result["output_tokens"] == [5, 5]
+    assert result["provider_request_ids"] == ["request-first", "request-second"]
+    assert result["provider_output_item_counts"] == [1, 1]
+    assert result["provider_text_block_counts"] == [1, 1]
+    assert result["provider_text_block_sha256"] == [
+        [hashlib.sha256(b"Reply to first").hexdigest()],
+        [hashlib.sha256(b"Reply to second").hexdigest()],
+    ]
+
+
+def test_duplicate_quality_flag_does_not_rewrite_text() -> None:
+    text = "What brings you in today?What brings you in today?"
+    assert modal_medsp1000._quality_flags(text) == ["exact_repeated_message"]
+    assert text == "What brings you in today?What brings you in today?"
+
+
+def test_openai_multi_message_blocks_are_hashed_separately() -> None:
+    repeated = "What brings you in today?"
+    response = ModelResponse(
+        text=repeated + repeated,
+        provider=Provider.OPENAI,
+        model="gpt-test",
+        request_id="response-1",
+        raw=SimpleNamespace(
+            output=[
+                SimpleNamespace(type="reasoning"),
+                SimpleNamespace(
+                    type="message",
+                    content=[SimpleNamespace(type="output_text", text=repeated)],
+                ),
+                SimpleNamespace(type="reasoning"),
+                SimpleNamespace(
+                    type="message",
+                    content=[SimpleNamespace(type="output_text", text=repeated)],
+                ),
+            ]
+        ),
+    )
+    diagnostics = modal_medsp1000._provider_response_diagnostics(response)
+    repeated_hash = hashlib.sha256(repeated.encode()).hexdigest()
+    assert diagnostics == {
+        "provider_request_id": "response-1",
+        "provider_output_item_count": 4,
+        "provider_text_block_count": 2,
+        "provider_text_block_sha256": [repeated_hash, repeated_hash],
+    }
+
+
+def test_api_clinician_failure_is_isolated_within_batch(monkeypatch) -> None:
+    def fake_call_model(model, messages, *, max_output_tokens, **provider_options):
+        del model, max_output_tokens, provider_options
+        if messages[-1]["content"] == "second":
+            raise RuntimeError("provider unavailable")
+        return ModelResponse(
+            text="First reply",
+            provider=Provider.ANTHROPIC,
+            model="claude-test",
+            finish_reason="end_turn",
+            usage=TokenUsage(input_tokens=12, output_tokens=3),
+        )
+
+    monkeypatch.setattr(modal_medsp1000, "call_model", fake_call_model)
+    result = modal_medsp1000._generate_api_clinician_batch(
+        "claude-test",
+        [
+            [{"role": "user", "content": "first"}],
+            [{"role": "user", "content": "second"}],
+        ],
+        220,
+    )
+    assert result["texts"] == ["First reply", ""]
+    assert result["errors"][0] is None
+    assert isinstance(result["errors"][1], RuntimeError)
+    assert str(result["errors"][1]) == "provider unavailable"
 
 
 @pytest.mark.parametrize(
@@ -318,7 +397,77 @@ def test_batch_failure_returns_auditable_failed_attempt(
     assert records[0]["attempt"] == 2
     assert records[0]["turn_count"] == 1
     assert records[0]["error_type"] == "RuntimeError"
-    assert "truncated patient batch" in records[0]["error_message"]
+    assert "truncated patient response" in records[0]["error_message"]
+
+
+def test_patient_failure_is_isolated_within_batch(tmp_path: Path, monkeypatch) -> None:
+    first = load_questions(_question_file(tmp_path / "questions.jsonl"))[0]
+    second = replace(first, question_id="question-2")
+
+    def clinician_batch(_model, conversations, _max_tokens):
+        count = len(conversations)
+        return {
+            "texts": ["Where does it hurt?"] * count,
+            "input_tokens": [10] * count,
+            "output_tokens": [4] * count,
+            "finish_reasons": ["stop"] * count,
+            "model_versions": ["clinician-version"] * count,
+            "latency_ms": [100] * count,
+            "provider_request_ids": [f"request-{index}" for index in range(count)],
+            "provider_output_item_counts": [2] * count,
+            "provider_text_block_counts": [1] * count,
+            "provider_text_block_sha256": [["a" * 64]] * count,
+        }
+
+    monkeypatch.setattr(
+        modal_medsp1000,
+        "_generate_api_clinician_batch",
+        clinician_batch,
+    )
+    patient_calls = 0
+
+    def patient_batch(*args):
+        nonlocal patient_calls
+        patient_calls += 1
+        count = len(args[0])
+        return {
+            "texts": ["My neck hurts."] * count,
+            "input_tokens": [20] * count,
+            "output_tokens": [4] * count,
+            "finish_reasons": (
+                ["stop", "length"] if patient_calls == 1 else ["stop"]
+            ),
+            "latency_ms": [50] * count,
+        }
+
+    patient = SimpleNamespace(
+        generate_batch=SimpleNamespace(
+            remote=patient_batch
+        )
+    )
+    records = modal_medsp1000._generate_conversation_batch(
+        questions=[first, second],
+        clinician_remote=None,
+        clinician_model="claude-test",
+        clinician_temperature=None,
+        patient=patient,
+        run_id="run-1",
+        starting_attempts={first.question_id: 1, second.question_id: 1},
+        exchanges=2,
+        patient_max_tokens=160,
+        clinician_max_tokens=220,
+        batch_number=1,
+        batch_count=1,
+    )
+    assert [record["status"] for record in records] == ["succeeded", "failed"]
+    assert [record["turn_count"] for record in records] == [4, 1]
+    assert patient_calls == 2
+    assert records[0]["turns"][0]["provider_request_id"] == "request-0"
+    assert records[0]["turns"][0]["provider_output_item_count"] == 2
+    assert records[0]["turns"][0]["provider_text_block_sha256"] == ["a" * 64]
+    assert records[1]["error_message"] == (
+        "truncated patient response at exchange 1: length"
+    )
 
 
 def test_resume_and_transcript(tmp_path: Path) -> None:
