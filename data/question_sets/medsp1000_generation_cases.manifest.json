@@ -5,6 +5,8 @@
   "record_count": 200,
   "question_type": "multi_turn_standardized_patient",
   "source_dataset": "byrLLCC/MedSP1000",
+  "source_url": "https://huggingface.co/datasets/byrLLCC/MedSP1000",
+  "source_license": "MIT",
   "source_revision": "55e3e55efd08c73baab912ba0c5b42637114fbc8",
   "official_code_revision": "2806984cb331d6fedc2c0555e3c1c4a54171c77a",
   "selection_seed": 42,

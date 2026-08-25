@@ -145,7 +145,7 @@ subset:
 
 ```bash
 uv run python -m judging.run_real_pocqi_judging \
-  --env-file .env_backup \
+  --env-file .env \
   --reveal-generator-identities \
   --judging-cases rubric_and_model_ranking \
   --num-questions 200 \
@@ -154,7 +154,7 @@ uv run python -m judging.run_real_pocqi_judging \
   --dry-run
 
 uv run python -m judging.run_real_pocqi_judging \
-  --env-file .env_backup \
+  --env-file .env \
   --reveal-generator-identities \
   --judging-cases rubric_and_model_ranking \
   --num-questions 200 \

@@ -1,8 +1,11 @@
 {
   "schema_version": "1.0",
   "artifact": "real_pocqi_questions.jsonl",
+  "artifact_sha256": "61e2e5e5c0d4fd6c5e62227739ed7cfc303aeda4137fb9651ef8a1d82cb44b60",
   "record_count": 620,
   "source_dataset": "jjfenglab/Real-POCQi",
+  "source_url": "https://huggingface.co/datasets/jjfenglab/Real-POCQi",
+  "source_license": "CC-BY-4.0",
   "source_revision": "9002e1ddff506d354f1b7becc1213b96299d07f6",
   "source_file": "questions.parquet",
   "source_file_sha256": "1af9b254151ac659286ab609e7c7b7f6bb8f830fa82eecb5b9eddb3a2322b9b3",

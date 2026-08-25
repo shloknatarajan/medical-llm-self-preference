@@ -14,7 +14,7 @@
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcommand{\model}[1]{\texttt{#1}}
 
-\title{Med-Self-Preference}
+\title{Medical LLM Self-Preference}
 \author{
   \textbf{Zara Ansari}\textsuperscript{1,2}\quad
   \textbf{Shlok Natarajan}\textsuperscript{1}\quad
@@ -57,7 +57,7 @@ from 18.8\% to 99.4\%, demonstrating that these measures are not
 interchangeable. In the completed identity-revealed follow-up, the matched
 effect is modestly weaker with generator names visible ($-1.391$ versus
 $-1.514$ when blinded; paired change $+0.123$, 95\% CI $[+0.059,+0.188]$). In
-MedSP1000, the corresponding effects were 0.518, 0.457, 0.502, and 0.613
+MedSP1000, the corresponding effects were $-0.518$, $-0.457$, $-0.502$, and $-0.613$
 positions at two, four, six, and eight turns. Self-preference varied
 substantially across judges and did not increase monotonically with every
 additional pair of turns. Longer answers received better ranks and rubric
@@ -141,7 +141,7 @@ Qwen & \model{Qwen/Qwen3.5-122B-A10B-FP8} & \model{Qwen/Qwen3.8-27B-FP8} \\
 \subsection{Single-turn pipeline}
 
 The single-turn pipeline uses all 620 questions from the frozen
-Real-POCQi source revision. All eight models generated one answer per question,
+Real-POCQi source revision \cite{feng2026}. All eight models generated one answer per question,
 for 4,960 logical generations. In the primary combined condition, all eight
 models judged every question. Each judge received the question and eight
 blinded candidate answers in randomized order. It assigned a score from 0 to 5
@@ -156,7 +156,8 @@ identity-revealed judgments are complete.
 
 \subsection{Multi-turn pipeline}
 
-The multi-turn experiment uses the role-separated MedSP1000 dataset. A
+The multi-turn experiment uses the role-separated MedSP1000 dataset
+\cite{liang2026}. A
 deterministic 200-scenario cohort was selected from source
 revision \path{55e3e55efd08c73baab912ba0c5b42637114fbc8}. Each scenario has a
 private standardized-patient actor packet and a separate clinician-visible
@@ -754,6 +755,17 @@ Self-Preference Bias in Rubric-Based Evaluation of Large Language Models.
 Panickssery, A., Bowman, S. R., and Feng, S. (2024).
 LLM Evaluators Recognize and Favor Their Own Generations.
 \emph{Advances in Neural Information Processing Systems}, 37.
+
+\bibitem{feng2026}
+Feng, J., Patel, V., Heagerty, P., Mai, Y., Sivaraman, V., Vossler, P.,
+Ouyang, J., and Jena, A. B. (2026).
+Expert Evaluation of Clinical AI Tools on Real Point-of-Care Clinical Queries.
+\emph{arXiv preprint arXiv:2606.28960}.
+
+\bibitem{liang2026}
+Liang, C., Qiu, P., Zhang, Y., Wang, Y., Wu, C., and Xie, W. (2026).
+Evaluating Large Language Models in Dynamic Clinical Decision-Making with
+Standardized Patient Cases. \emph{arXiv preprint arXiv:2606.05112}.
 
 \end{thebibliography}
 

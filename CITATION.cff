@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it using the metadata below."
+title: "Medical LLM Self-Preference"
+type: software
+authors:
+  - family-names: Ansari
+    given-names: Zara
+  - family-names: Natarajan
+    given-names: Shlok
+  - family-names: Fanous
+    given-names: Aaron
+  - family-names: Daneshjou
+    given-names: Roxana
+version: 0.1.0
+date-released: 2026-08-24
+repository-code: "https://github.com/shloknatarajan/medical-llm-self-preference"
+license: MIT

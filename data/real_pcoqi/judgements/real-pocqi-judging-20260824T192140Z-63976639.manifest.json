@@ -4,7 +4,7 @@
   "run_id": "real-pocqi-judging-20260824T192140Z-63976639",
   "created_at": "2026-08-24T19:25:31.220963Z",
   "input_generations": "data/outputs/generations/real_pocqi_generations.jsonl",
-  "env_file": ".env_backup",
+  "env_file": ".env",
   "output_dir": "data/real_pcoqi/judgements",
   "question_count": 200,
   "question_ids": [

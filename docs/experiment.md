@@ -136,7 +136,8 @@ match even if the sample were recovered.
 
 The frozen Real-POCQi artifact contains all 620 questions from source revision
 `9002e1ddff506d354f1b7becc1213b96299d07f6`, covering 30 specialty labels. The
-expanded cohort has two models from each of four families:
+expanded cohort has two models from each of four families. See Feng et al.
+(2026) for the benchmark's construction and expert evaluation.
 
 | Family | Higher-capability tier | Workhorse tier |
 |---|---|---|
@@ -155,7 +156,8 @@ The active MedSP1000 artifact contains 200 deterministic scenarios selected
 from source revision `55e3e55efd08c73baab912ba0c5b42637114fbc8` with seed
 42. Each scenario has separate clinician-visible initialization and private
 standardized-patient actor material. Evaluator and environment-controller
-materials are excluded.
+materials are excluded. See Liang et al. (2026) for the source dataset and
+standardized-patient benchmark design.
 
 The patient simulator is fixed to
 `mistralai/Mistral-Small-3.1-24B-Instruct-2503`. Six API models—Sol, Terra,
@@ -821,6 +823,15 @@ records, and superseded successful attempts. Analyses must filter by
 logical key. Physical line counts are not observation counts.
 
 ## References
+
+Feng, Jean, Vishal Patel, Patrick Heagerty, Yifan Mai, Venkatesh Sivaraman,
+Patrick Vossler, Jialin Ouyang, and Anupam B. Jena. “Expert Evaluation of
+Clinical AI Tools on Real Point-of-Care Clinical Queries.” *arXiv:2606.28960*,
+2026.
+
+Liang, Cheng, Pengcheng Qiu, Ya Zhang, Yanfeng Wang, Chaoyi Wu, and Weidi Xie.
+“Evaluating Large Language Models in Dynamic Clinical Decision-Making with
+Standardized Patient Cases.” *arXiv:2606.05112*, 2026.
 
 Alvarez-Arenas, J. I., D. Jimenez-Carretero, D. Mananes, and F. Sanchez-Cabo.
 “The Unreliable Judges: Assessing Reproducibility and Self-Preference Bias of

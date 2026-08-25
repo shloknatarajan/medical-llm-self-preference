@@ -146,7 +146,6 @@ The analysis scripts select the last successful attempt for each logical
 question–judge cell and filter on the production experiment identifier. This
 preserves the complete append-only audit trail while preventing smoke runs,
 failed attempts, and retries from being counted as independent observations.
-Source and output hashes are recorded in analysis manifests.
 
 ## Rerun generation or judging
 
@@ -255,7 +254,8 @@ history, and planned extensions, see [docs/experiment.md](docs/experiment.md).
 ## Citation
 
 An arXiv identifier has not yet been assigned. Until the final citation is
-available, please cite the repository as:
+available, please cite the repository as below or use the machine-readable
+[`CITATION.cff`](CITATION.cff):
 
 ```bibtex
 @misc{ansari2026medicalselfpreference,
@@ -268,11 +268,12 @@ available, please cite the repository as:
 
 ## Licensing and responsible use
 
-This repository does not yet include a project license. Until a license is
-added, copyright remains with the authors and no general reuse permission is
-granted. Upstream datasets and model outputs may also be subject to their own
-terms. A release license and any required third-party attribution should be
-finalized before the public research release.
+Repository-authored code and documentation are released under the
+[MIT License](LICENSE). Frozen benchmark inputs retain their upstream terms;
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dataset licenses,
+citations, source revisions, and the transformations made in this repository.
+Saved model generations and judgments are provided as research records and may
+also be subject to the applicable model providers' terms.
 
 This work is intended for research and evaluation. It does not provide medical
 advice, and the saved model outputs should not be used for patient care.
