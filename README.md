@@ -1,21 +1,5 @@
 # Medical LLM self-preference
 
-Code, model outputs, and reproducible analyses for studying whether large
-language models evaluating medical responses favor answers produced by
-themselves or by related model families.
-
-Zara Ansari<sup>1,2</sup>, Shlok Natarajan<sup>1</sup>, Aaron Fanous<sup>1</sup>,
-and Roxana Daneshjou<sup>1,3</sup>
-
-<sup>1</sup> Department of Biomedical Data Science, Stanford University<br>
-<sup>2</sup> Department of Computer Science, Harvey Mudd College<br>
-<sup>3</sup> Department of Dermatology, Stanford University
-
-> **Research release status:** The expanded experiments and committed analyses
-> are complete as of August 24, 2026. The manuscript is being prepared for a
-> public preprint release. Citation metadata will be updated when an arXiv
-> identifier is available.
-
 ## Overview
 
 LLMs are increasingly used as scalable evaluators of model-generated medical
@@ -39,7 +23,7 @@ model's own judge placed its answer closer to first place.
 Useful entry points:
 
 - [Manuscript PDF](output/pdf/med_self_preference_updated.pdf)
-- [Canonical experiment record](docs/experiment.md)
+- [Experiment details](docs/experiment.md)
 - [Documentation map](docs/README.md)
 - [Static results explorer](src/leaderboard/index.html)
 - [Derived analysis definitions](data/analysis/self_preference/README.md)
@@ -73,7 +57,7 @@ These findings support using multi-family judge panels, matched estimands,
 explicit position controls, and separate reporting of scores and rankings
 instead of relying on a single LLM judge or raw win rate.
 
-## Expanded study design
+## Study design
 
 | Component | Real-POCQi | MedSP1000 |
 |---|---:|---:|
@@ -82,9 +66,9 @@ instead of relying on a single LLM judge or raw win rate.
 | Judges | 8 | 6 |
 | Primary candidate set | 8 answers | 6 trajectories |
 | Evaluation views | Blinded, direct ranking, identity revealed | 2, 4, 6, and 8 turns |
-| Completed production judgments | 6,960 | 4,800 |
+| Saved judgments | 6,960 | 4,800 |
 
-The expanded release contains **11,760 completed production judgments**:
+The repository contains **11,760 judgments**:
 4,960 blinded Real-POCQi rubric-plus-ranking judgments, 800 direct rankings,
 1,200 identity-revealed judgments, and 4,800 MedSP1000 judgments across four
 conversation lengths.
@@ -102,14 +86,13 @@ The complete Real-POCQi cohort contains two models from each of four families:
 
 MedSP1000 uses the six API models as clinician generators and judges. The
 patient simulator is fixed to
-`mistralai/Mistral-Small-3.1-24B-Instruct-2503`. Planned Qwen clinician and
-judge extensions are not part of the completed MedSP1000 scientific matrix.
+`mistralai/Mistral-Small-3.1-24B-Instruct-2503`. Qwen clinician and judge runs
+are not included in the current MedSP1000 experiments.
 
-The repository also preserves a legacy four-model phase. Its reported results
-are documented for provenance, but its raw generations and judgments are not
-available here and cannot be independently reproduced from this release. The
-expanded experiments above are the reproducible basis for the current
-conclusions.
+The repository also preserves results from an earlier four-model phase. Its
+raw generations and judgments are not available here, so those results cannot
+be reproduced from the repository. The experiments described above are the
+basis for the current conclusions.
 
 ## Reproduce the analyses
 
@@ -176,7 +159,7 @@ interface is documented in [src/inference/README.md](src/inference/README.md).
 | `data/real_pcoqi/judgements/` | Real-POCQi blinded, direct-ranking, and identity-revealed judgments |
 | `data/analysis/self_preference/` | Reproducible model-, pairwise-, question-, and token-length analysis artifacts |
 | `data/deprecated/` | Historical inputs, standalone pilots, and smoke outputs retained for provenance |
-| `docs/experiment.md` | Scientific source of truth for methods, counts, results, limitations, and artifact status |
+| `docs/experiment.md` | Detailed methods, counts, results, limitations, and available files |
 | `docs/latex/med_self_preference/` | LaTeX manuscript source |
 | `src/leaderboard/` | Build-free static results explorer |
 
@@ -191,8 +174,7 @@ deterministically with seed 42 from revision
 
 Downloaded upstream snapshots under `data/source/` are ignored because they
 are re-downloadable and may contain nested repositories. Historical artifacts
-are not deleted; artifacts outside the active scientific matrix are labeled
-and retained under `data/deprecated/`.
+outside the current experiments are labeled and kept under `data/deprecated/`.
 
 ## Browse the results locally
 
@@ -245,16 +227,15 @@ Operational formats are documented alongside their artifacts:
 - Current MedSP1000 conclusions cover six API clinician models, not the full
   eight-model Real-POCQi cohort.
 - Model outputs and judgments may contain factual errors, unsafe medical
-  content, or provider-specific artifacts. They are research records, not
-  clinical recommendations.
+  content, or provider-specific artifacts. They are not clinical
+  recommendations.
 
 For full methods, uncertainty estimates, specialty results, prompt-development
 history, and planned extensions, see [docs/experiment.md](docs/experiment.md).
 
 ## Citation
 
-An arXiv identifier has not yet been assigned. Until the final citation is
-available, please cite the repository as below or use the machine-readable
+To cite this repository, use the entry below or the machine-readable
 [`CITATION.cff`](CITATION.cff):
 
 ```bibtex
@@ -262,7 +243,7 @@ available, please cite the repository as below or use the machine-readable
   title  = {Medical LLM Self-Preference},
   author = {Ansari, Zara and Natarajan, Shlok and Fanous, Aaron and Daneshjou, Roxana},
   year   = {2026},
-  note   = {Research code and artifacts; preprint forthcoming}
+  note   = {Code, model outputs, and analyses}
 }
 ```
 
@@ -272,8 +253,8 @@ Repository-authored code and documentation are released under the
 [MIT License](LICENSE). Frozen benchmark inputs retain their upstream terms;
 see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dataset licenses,
 citations, source revisions, and the transformations made in this repository.
-Saved model generations and judgments are provided as research records and may
-also be subject to the applicable model providers' terms.
+Saved model generations and judgments may also be subject to the applicable
+model providers' terms.
 
 This work is intended for research and evaluation. It does not provide medical
 advice, and the saved model outputs should not be used for patient care.
